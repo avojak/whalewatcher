@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=@name@
+GenericName=Docker Desktop Client
+Comment=Friendly Docker Desktop Client
+Categories=Development;Utility;
+Exec=@binary@
+Icon=@icon@
+Terminal=false
+Type=Application
+Keywords=Docker;
