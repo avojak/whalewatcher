@@ -19,26 +19,23 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
-
-    public HeaderBar () {
-        Object (
-            title: Constants.APP_NAME,
-            show_close_button: true,
-            has_subtitle: false
-        );
-    }
+public class WhaleWatcher.Widgets.Sidebar.SidebarWidget : Gtk.Grid {
 
     construct {
-        var mode_switch = new Granite.ModeSwitch.from_icon_name ("display-brightness-symbolic", "weather-clear-night-symbolic");
-        mode_switch.primary_icon_tooltip_text = _("Light background");
-        mode_switch.secondary_icon_tooltip_text = _("Dark background");
-        mode_switch.valign = Gtk.Align.CENTER;
-        mode_switch.halign = Gtk.Align.CENTER;
-        mode_switch.bind_property ("active", Gtk.Settings.get_default (), "gtk_application_prefer_dark_theme");
-        WhaleWatcher.Application.settings.bind ("prefer-dark-style", mode_switch, "active", GLib.SettingsBindFlags.DEFAULT);
+        var list = new Gtk.ListBox () {
+            expand = true,
+            selection_mode = Gtk.SelectionMode.SINGLE
+        };
+        list.add (new WhaleWatcher.Widgets.Sidebar.ImagesEntry ());
+        list.add (new WhaleWatcher.Widgets.Sidebar.ContainersEntry ());
+        list.add (new WhaleWatcher.Widgets.Sidebar.VolumesEntry ());
+        list.add (new WhaleWatcher.Widgets.Sidebar.NetworksEntry ());
 
-        pack_end (mode_switch);
+        var scrolled_window = new Gtk.ScrolledWindow (null, null);
+        scrolled_window.add (list);
+
+        orientation = Gtk.Orientation.VERTICAL;
+        add (scrolled_window);
     }
 
 }

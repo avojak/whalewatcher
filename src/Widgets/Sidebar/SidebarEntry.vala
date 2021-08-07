@@ -19,26 +19,39 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
+public abstract class WhaleWatcher.Widgets.Sidebar.SidebarEntry : Gtk.ListBoxRow {
 
-    public HeaderBar () {
+    public string icon_name { get; construct; }
+    public string title { get; construct; }
+
+    protected SidebarEntry (string icon_name, string title) {
         Object (
-            title: Constants.APP_NAME,
-            show_close_button: true,
-            has_subtitle: false
+            icon_name: icon_name,
+            title: title
         );
     }
 
     construct {
-        var mode_switch = new Granite.ModeSwitch.from_icon_name ("display-brightness-symbolic", "weather-clear-night-symbolic");
-        mode_switch.primary_icon_tooltip_text = _("Light background");
-        mode_switch.secondary_icon_tooltip_text = _("Dark background");
-        mode_switch.valign = Gtk.Align.CENTER;
-        mode_switch.halign = Gtk.Align.CENTER;
-        mode_switch.bind_property ("active", Gtk.Settings.get_default (), "gtk_application_prefer_dark_theme");
-        WhaleWatcher.Application.settings.bind ("prefer-dark-style", mode_switch, "active", GLib.SettingsBindFlags.DEFAULT);
+        var image = new Gtk.Image () {
+            gicon = new ThemedIcon (icon_name),
+            pixel_size = 32
+        };
 
-        pack_end (mode_switch);
+        var title_label = new Gtk.Label (title) {
+            ellipsize = Pango.EllipsizeMode.END,
+            xalign = 0,
+            valign = Gtk.Align.CENTER
+        };
+        title_label.get_style_context ().add_class (Granite.STYLE_CLASS_H3_LABEL);
+
+        var grid = new Gtk.Grid () {
+            margin = 6,
+            column_spacing = 6
+        };
+        grid.attach (image, 0, 0);
+        grid.attach (title_label, 1, 0);
+
+        add (grid);
     }
 
 }

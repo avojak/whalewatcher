@@ -37,24 +37,24 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         }
     }
 
-    private const string REQUEST_MESSAGE_FORMAT = "%s %s HTTP/1.1\r\nHost:\0\r\n\r\n";
+    private const string REQUEST_MESSAGE_FORMAT = "%s %s HTTP/1.1\r\nHost:\r\n\r\n";
 
     public string socket_file { get; construct; }
 
-    public SocketRestClient (string socket_file) {
+    SocketRestClient (string socket_file) {
 
     }
 
-    protected void get_sync (string endpoint) {
+    protected string? get_sync (string endpoint) {
         debug ("Executing %s request to %s", HttpMethod.GET.to_string (), endpoint);
-        send_request (HttpMethod.GET, endpoint);
+        return send_request (HttpMethod.GET, endpoint);
     }
 
     protected void post_sync () {
         // TODO
     }
 
-    private string send_request (HttpMethod method, string endpoint) {
+    private string? send_request (HttpMethod method, string endpoint) {
         IOStream connection = connect_to_socket ();
         DataInputStream input_stream = new DataInputStream (connection.input_stream);
         DataOutputStream output_stream = new DataOutputStream (connection.output_stream);
@@ -63,22 +63,48 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         send_output (output_stream, REQUEST_MESSAGE_FORMAT.printf (method.to_string (), endpoint));
         //  send_output (output_stream, message);
 
-
-        string line = "";
         Cancellable cancellable = new Cancellable ();
-        do {
-            try {
-                line = input_stream.read_line (null, cancellable);
-                //  handle_line (line);
-                if (WhaleWatcher.Application.is_dev_mode ()) {
-                    print (@"$line\n");
-                }
-            } catch (GLib.IOError e) {
-                // TODO: Handle this differently on initialization (currently fails silently in the background)
-                critical ("IOError while reading: %s\n", e.message);
-                return "";
-            }
-        } while (line != null);
+        uint status_code = read_status_code (input_stream, cancellable);
+        Soup.MessageHeaders headers = read_headers (input_stream, cancellable);
+        string? body = read_body (headers, input_stream, cancellable);
+
+        // TODO: Remove this
+        debug (body);
+
+        if (is_error (status_code)) {
+            warning (body);
+        }
+
+        //  int content_length = 0;
+        //  string line = "";
+        //  Cancellable cancellable = new Cancellable ();
+        //  do {
+        //      try {
+        //          line = input_stream.read_line_utf8 (null, cancellable);
+        //          //  handle_line (line);
+        //          if (WhaleWatcher.Application.is_dev_mode ()) {
+        //              debug (@"$line\n");
+        //          }
+        //          if (line.contains ("Content-Length: ")) {
+        //              content_length = int.parse (line.substring (15));
+        //              debug (content_length.to_string ());
+        //          }
+        //          if (line.chomp ().chug ().length == 0) {
+        //              debug ("Reading %d bytes", content_length);
+        //              try {
+        //                  string data = (string) input_stream.read_bytes (content_length, cancellable).get_data ();
+        //                  print (data + "\n");
+        //                  break;
+        //              } catch (GLib.Error e) {
+        //                  warning ("Error while reading payload data: %s\n", e.message);
+        //              }
+        //          }
+        //      } catch (GLib.IOError e) {
+        //          // TODO: Handle this differently on initialization (currently fails silently in the background)
+        //          critical ("IOError while reading: %s\n", e.message);
+        //          return "";
+        //      }
+        //  } while (should_keep_reading (line));
         
         try {
             connection.close ();
@@ -87,7 +113,96 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         } finally {
             cancellable.cancel ();
         }
-        return "";   
+        return body;   
+    }
+
+    private uint? read_status_code (DataInputStream input_stream, Cancellable? cancellable) {
+        try {
+            var line = input_stream.read_line_utf8 (null, cancellable).strip ();
+            return uint.parse (line.split (" ")[1]);
+        } catch (GLib.IOError e) {
+            critical ("IOError while reading status: %s\n", e.message);
+            return null;
+        }
+    }
+
+    private Soup.MessageHeaders? read_headers (DataInputStream input_stream, Cancellable? cancellable) {
+        var headers = new Soup.MessageHeaders (Soup.MessageHeadersType.RESPONSE);
+        string line = null;
+        try {
+            while ((line = input_stream.read_line_utf8 (null, cancellable).strip ()) != "") {
+                if (WhaleWatcher.Application.is_dev_mode ()) {
+                    debug (@"$line\n");
+                }
+                int split_index = line.index_of (": ");
+                headers.append (line.substring (0, split_index), line.substring (split_index + 2));
+            }
+        } catch (GLib.IOError e) {
+            critical ("IOError while reading headers: %s\n", e.message);
+            return null;
+        }
+        return headers;
+    }
+
+    private string? read_body (Soup.MessageHeaders headers, DataInputStream input_stream, Cancellable? cancellable) {
+        if (headers.get_one ("Transfer-Encoding") == "chunked") {
+            return read_chunked (input_stream, cancellable);
+        } else if (headers.get_one ("Content-Length") != null) {
+            int content_length = int.parse (headers.get_one ("Content-Length"));
+            return read_content (input_stream, content_length, cancellable);
+        } else {
+            // TODO: Handle this! Read until end of stream
+            assert_not_reached ();
+        }
+    }
+
+    private string? read_content (DataInputStream input_stream, int content_length, Cancellable? cancellable) {
+        try {
+            //  size_t length;
+            uint8[] buffer = new uint8[content_length]; //new uint8[int.MAX];
+            ssize_t length = input_stream.read (buffer, cancellable);
+            //  print (length.to_string ());
+            //  buffer[length] = '\0';
+            string line = (string) buffer;
+
+            //  uint8[] data = input_stream.read_bytes (content_length, cancellable).get_data ();
+            //  string line = (string) data[0:data.length - "\r\n\r\n".length];
+            
+            //  print(line);
+            //  print(length.to_string ());
+            //  line = input_stream.read_line_utf8 (out length, cancellable);
+            //  print(line);
+            //  print(length.to_string ());
+            if (WhaleWatcher.Application.is_dev_mode ()) {
+                debug (@"$line\n");
+            }
+            return line;
+        } catch (GLib.Error e) {
+            critical ("Error while reading content: %s\n", e.message);
+            return null;
+        }
+    }
+
+    private string? read_chunked (DataInputStream input_stream, Cancellable? cancellable) {
+        try {
+            string line = null;
+            while ((line = input_stream.read_line_utf8 (null, cancellable).strip ()) != "") {
+                if (WhaleWatcher.Application.is_dev_mode ()) {
+                    debug (@"$line\n");
+                }
+                //  int split_index = line.index_of (":");
+                //  headers.append (line.substring (0, split_index), line.substring (split_index + 2, line.length));
+            }
+            return line;
+        } catch (GLib.IOError e) {
+            critical ("IOError while reading chunked content: %s\n", e.message);
+            return null;
+        }
+    }
+
+    private string? read_chunk () {
+        // TODO
+        return null;
     }
 
     private bool should_keep_reading (string? line) {
@@ -153,12 +268,18 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
     private void send_output (DataOutputStream output_stream, string output) {
         try {
             debug ("Sending output: %s", output);
-            bool res = output_stream.put_string (@"$output\r\n");
+            bool res = output_stream.put_string (@"$output");
             debug ("done sending: %s", res ? "success" : "failure");
         } catch (GLib.IOError e) {
             critical ("Error while sending output for server connection: %s", e.message);
             // TODO: Handle errors!!
         }
+    }
+
+    private bool is_error (uint status_code) {
+        bool is_4xx = status_code.to_string ()[0] == '4';
+        bool is_5xx = status_code.to_string ()[0] == '5';
+        return is_4xx || is_5xx;
     }
 
 }

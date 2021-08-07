@@ -34,12 +34,12 @@ public class WhaleWatcher.Application : Gtk.Application {
     }
 
     static construct {
-        Granite.Services.Logger.initialize (Constants.APP_ID);
-        if (is_dev_mode ()) {
-            Granite.Services.Logger.DisplayLevel = Granite.Services.LogLevel.DEBUG;
-        } else {
-            Granite.Services.Logger.DisplayLevel = Granite.Services.LogLevel.WARN;
-        }
+        //  Granite.Services.Logger.initialize (Constants.APP_ID);
+        //  if (is_dev_mode ()) {
+        //      Granite.Services.Logger.DisplayLevel = Granite.Services.LogLevel.DEBUG;
+        //  } else {
+        //      Granite.Services.Logger.DisplayLevel = Granite.Services.LogLevel.WARN;
+        //  }
         info ("%s version: %s", Constants.APP_ID, Constants.VERSION);
         info ("Kernel version: %s", Posix.utsname ().release);
     }
@@ -49,6 +49,10 @@ public class WhaleWatcher.Application : Gtk.Application {
         windows = new GLib.List<WhaleWatcher.MainWindow> ();
 
         docker_client = WhaleWatcher.Services.DockerClient.instance;
+
+        startup.connect ((handler) => {
+            Hdy.init ();
+        });
     }
 
     public static bool is_dev_mode () {
@@ -74,7 +78,10 @@ public class WhaleWatcher.Application : Gtk.Application {
     protected override void activate () {
         this.add_new_window ();
 
-        docker_client.ping ();
+        //  docker_client.get_info ();
+        //  docker_client.ping ();
+        docker_client.get_version ();
+        //  docker_client.get_images ();
     }
 
     public static int main (string[] args) {

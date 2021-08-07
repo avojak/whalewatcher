@@ -1,0 +1,22 @@
+app-id: com.github.avojak.whalewatcher
+
+runtime: io.elementary.Platform
+runtime-version: '6'
+sdk: io.elementary.Sdk
+
+command: com.github.avojak.whalewatcher
+
+finish-args:
+  - '--share=ipc'
+  - '--share=network'
+  - '--socket=fallback-x11'
+  - '--socket=wayland'
+  - '--system-talk-name=org.freedesktop.Accounts'
+  - '--filesystem=/run/docker.sock:ro'
+
+modules:
+  - name: whalewatcher
+    buildsystem: meson
+    sources:
+      - type: dir
+        path: .

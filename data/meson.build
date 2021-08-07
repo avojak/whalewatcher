@@ -1,18 +1,18 @@
 icon_sizes = ['16', '24', '32', '48', '64', '128']
 
 # Install the icons
-# foreach i : icon_sizes
-#     install_data(
-#         join_paths('assets', 'icons', i + 'x' + i, meson.project_name() + '.svg'),
-#         install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', i + 'x' + i, 'apps'),
-#         rename: '@0@.svg'.format(application_id)
-#     )
-#     install_data(
-#         join_paths('assets', 'icons', i + 'x' + i, meson.project_name() + '.svg'),
-#         install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', i + 'x' + i + '@2', 'apps'),
-#         rename: '@0@.svg'.format(application_id)
-#     )
-# endforeach
+foreach i : icon_sizes
+    install_data(
+        join_paths('assets', 'icons', i + 'x' + i, meson.project_name() + '.svg'),
+        install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', i + 'x' + i, 'apps'),
+        rename: '@0@.svg'.format(application_id)
+    )
+    install_data(
+        join_paths('assets', 'icons', i + 'x' + i, meson.project_name() + '.svg'),
+        install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', i + 'x' + i + '@2', 'apps'),
+        rename: '@0@.svg'.format(application_id)
+    )
+endforeach
 
 # Install the settings schema
 schema_path = '/com/github/avojak/whalewatcher/'

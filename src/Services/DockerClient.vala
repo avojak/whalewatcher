@@ -21,7 +21,11 @@
 
 public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRestClient {
 
+    private const string SOCKET_FILE = "/var/run/docker.sock";
+    private const string API_VERSION = "v1.41";
+
     private static WhaleWatcher.Services.DockerClient _instance = null;
+
     public static WhaleWatcher.Services.DockerClient instance {
         get {
             if (_instance == null) {
@@ -33,16 +37,29 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
 
     private DockerClient () {
         Object (
-            socket_file: "/var/run/docker.sock"
+            socket_file: SOCKET_FILE
         );
     }
 
     public void ping () {
-        get_sync ("/_ping");
+        get_sync (@"/$API_VERSION/_ping");
+
+        //  var session = new Soup.Session ();
+        //  var message = new Soup.Message ("GET", "unix:///var/run/docker.sock/_ping");
+        //  session.send_message (message);
+        //  //  print ((string) message.response_body.flatten ().data + "\n");
+        //  // Process the result:
+        //  message.response_headers.foreach ((name, val) => {
+        //      print ("%s = %s\n", name, val);
+        //  });
+
+        //  print ("Status Code: %u\n", message.status_code);
+        //  print ("Message length: %lld\n", message.response_body.length);
+        //  print ("Data: \n%s\n", (string) message.response_body.data);
     }
 
     public void get_info () {
-        get_sync ("/info");
+        get_sync (@"/$API_VERSION/info");
     }
 
     //  public void get_info () {
@@ -92,5 +109,13 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
     //      //      stderr.printf ("I guess something is not working...\n");
     //      //  }
     //  }
+
+    public void get_version() {
+        get_sync (@"/$API_VERSION/version");
+    }
+
+    public void get_images () {
+        get_sync (@"/$API_VERSION/images/json");
+    }
 
 }

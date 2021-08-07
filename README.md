@@ -24,6 +24,15 @@ $ sudo ninja -C build install
 $ com.github.avojak.whalewatcher
 ```
 
+### Flatpak
+
+To test the Flatpak build with Flatpak Builder:
+
+```bash
+$ flatpak-builder build com.github.avojak.whalewatcher.yml --user --install --force-clean
+$ flatpak run --env=G_MESSAGES_DEBUG=all com.github.avojak.whalewatcher
+```
+
 ### Development Build
 
 You can also install a development build alongside a stable version by specifying the dev profile:

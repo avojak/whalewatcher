@@ -16,6 +16,13 @@ whalewatcher_files = files(
     join_paths('Services', 'DockerClient.vala'),
     join_paths('Services', 'SocketRestClient.vala'),
     join_paths('Widgets', 'HeaderBar.vala'),
+    join_paths('Widgets', 'MainView.vala'),
+    join_paths('Widgets', 'Sidebar', 'ImagesEntry.vala'),
+    join_paths('Widgets', 'Sidebar', 'ContainersEntry.vala'),
+    join_paths('Widgets', 'Sidebar', 'NetworksEntry.vala'),
+    join_paths('Widgets', 'Sidebar', 'VolumesEntry.vala'),
+    join_paths('Widgets', 'Sidebar', 'SidebarWidget.vala'),
+    join_paths('Widgets', 'Sidebar', 'SidebarEntry.vala')
 )
 
 # Create a new executable, list the files we want to compile, list the dependencies we need, and install
@@ -28,9 +35,10 @@ executable(
         dependency('gtk+-3.0', version: '>= 3.6.4'),
         dependency('gee-0.8', version: '>= 0.8.5'),
         dependency('glib-2.0', version: '>= 2.30.0'),
-        dependency('granite', version: '>= 0.5.1'),
+        dependency('granite', version: '>= 0.6.0'),
         dependency('libsoup-2.4'),
-        dependency('json-glib-1.0')
+        dependency('json-glib-1.0'),
+        dependency('libhandy-1', version: '>=1.0.0')
     ],
     vala_args: vala_args,
     install: true

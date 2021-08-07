@@ -19,11 +19,10 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.MainWindow : Gtk.ApplicationWindow {
+public class WhaleWatcher.MainWindow : Hdy.Window {
 
     public unowned WhaleWatcher.Application app { get; construct; }
 
-    private WhaleWatcher.Widgets.HeaderBar header_bar;
     private WhaleWatcher.MainLayout main_layout;
 
     public MainWindow (WhaleWatcher.Application application) {
@@ -37,12 +36,6 @@ public class WhaleWatcher.MainWindow : Gtk.ApplicationWindow {
     }
 
     construct {
-        header_bar = new WhaleWatcher.Widgets.HeaderBar ();
-        set_titlebar (header_bar);
-
-        unowned Gtk.StyleContext header_context = header_bar.get_style_context ();
-        header_context.add_class ("default-decoration");
-
         main_layout = new WhaleWatcher.MainLayout (this);
         add (main_layout);
 

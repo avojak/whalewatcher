@@ -19,26 +19,13 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
+public class WhaleWatcher.Widgets.Sidebar.NetworksEntry : WhaleWatcher.Widgets.Sidebar.SidebarEntry {
 
-    public HeaderBar () {
+    public NetworksEntry () {
         Object (
-            title: Constants.APP_NAME,
-            show_close_button: true,
-            has_subtitle: false
+            icon_name: "network-wired",
+            title: _("Networks")
         );
-    }
-
-    construct {
-        var mode_switch = new Granite.ModeSwitch.from_icon_name ("display-brightness-symbolic", "weather-clear-night-symbolic");
-        mode_switch.primary_icon_tooltip_text = _("Light background");
-        mode_switch.secondary_icon_tooltip_text = _("Dark background");
-        mode_switch.valign = Gtk.Align.CENTER;
-        mode_switch.halign = Gtk.Align.CENTER;
-        mode_switch.bind_property ("active", Gtk.Settings.get_default (), "gtk_application_prefer_dark_theme");
-        WhaleWatcher.Application.settings.bind ("prefer-dark-style", mode_switch, "active", GLib.SettingsBindFlags.DEFAULT);
-
-        pack_end (mode_switch);
     }
 
 }
