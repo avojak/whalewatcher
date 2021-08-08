@@ -31,11 +31,20 @@ public class WhaleWatcher.Widgets.Sidebar.SidebarWidget : Gtk.Grid {
         list.add (new WhaleWatcher.Widgets.Sidebar.VolumesEntry ());
         list.add (new WhaleWatcher.Widgets.Sidebar.NetworksEntry ());
 
+        list.row_selected.connect ((row) => {
+            if (row != null) {
+                var entry = row as WhaleWatcher.Widgets.Sidebar.SidebarEntry;
+                row_selected (entry.get_name ());
+            }
+        });
+
         var scrolled_window = new Gtk.ScrolledWindow (null, null);
         scrolled_window.add (list);
 
         orientation = Gtk.Orientation.VERTICAL;
         add (scrolled_window);
     }
+
+    public signal void row_selected (string name);
 
 }

@@ -24,18 +24,7 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
     private const string SOCKET_FILE = "/var/run/docker.sock";
     private const string API_VERSION = "v1.41";
 
-    private static WhaleWatcher.Services.DockerClient _instance = null;
-
-    public static WhaleWatcher.Services.DockerClient instance {
-        get {
-            if (_instance == null) {
-                _instance = new WhaleWatcher.Services.DockerClient ();
-            }
-            return _instance;
-        }
-    }
-
-    private DockerClient () {
+    public DockerClient () {
         Object (
             socket_file: SOCKET_FILE
         );
@@ -43,79 +32,43 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
 
     public void ping () {
         get_sync (@"/$API_VERSION/_ping");
-
-        //  var session = new Soup.Session ();
-        //  var message = new Soup.Message ("GET", "unix:///var/run/docker.sock/_ping");
-        //  session.send_message (message);
-        //  //  print ((string) message.response_body.flatten ().data + "\n");
-        //  // Process the result:
-        //  message.response_headers.foreach ((name, val) => {
-        //      print ("%s = %s\n", name, val);
-        //  });
-
-        //  print ("Status Code: %u\n", message.status_code);
-        //  print ("Message length: %lld\n", message.response_body.length);
-        //  print ("Data: \n%s\n", (string) message.response_body.data);
     }
 
     public void get_info () {
         get_sync (@"/$API_VERSION/info");
     }
 
-    //  public void get_info () {
-    //      //  var uri = "unix:///var/run/docker.sock/info";
-    //      //  var session = new Soup.Session ();
-    //      //  var message = new Soup.Message ("GET", uri);
-    //      //  debug ("sending...");
-    //      //  session.send_message (message);
-    //      //  debug ("done");
-    //      //  print ((string) message.response_body.flatten ().data);
-
-    //      var host = "http://localhost/info";
-
-    //      try {
-    //          // Resolve hostname to IP address
-    //          //  var resolver = Resolver.get_default ();
-    //          //  var addresses = resolver.lookup_by_name (host, null);
-    //          //  var address = addresses.nth_data (0);
-    //          //  print (@"Resolved $host to $address\n");
-
-    //          // Connect
-    //          var client = new SocketClient ();
-    //          var conn = client.connect (new InetSocketAddress (new InetAddress.from_string ("/var/run/docker.sock"), 80));
-    //          print (@"Connected to $host\n");
-
-    //          // Send HTTP GET request
-    //          var message = @"GET / HTTP/1.1\r\n\r\n";
-    //          conn.output_stream.write (message.data);
-    //          print ("Wrote request\n");
-
-    //          // Receive response
-    //          var response = new DataInputStream (conn.input_stream);
-    //          var status_line = response.read_line (null).strip ();
-    //          print ("Received status line: %s\n", status_line);
-
-    //      } catch (Error e) {
-    //          stderr.printf ("%s\n", e.message);
-    //      }
-
-    //      //  try {
-    //      //      var parser = new Json.Parser ();
-    //      //      parser.load_from_data ((string) message.response_body.flatten ().data, -1);
-
-    //      //      var root_object = parser.get_root ().get_object ();
-    //      //      print (Json.to_string (parser.get_root (), true));
-    //      //  } catch (Error e) {
-    //      //      stderr.printf ("I guess something is not working...\n");
-    //      //  }
-    //  }
-
-    public void get_version() {
-        get_sync (@"/$API_VERSION/version");
+    public WhaleWatcher.Models.DockerVersion? get_version () {
+        string? json_data = get_sync (@"/$API_VERSION/version");
+        return parse_json (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerVersion.from_json (json_obj);
+        }) as WhaleWatcher.Models.DockerVersion;
     }
 
     public void get_images () {
         get_sync (@"/$API_VERSION/images/json");
     }
+
+    public void get_containers () {
+        get_sync (@"/$API_VERSION/containers/json");
+    }
+
+    public void stream_events (Cancellable cancellable) {
+        get_stream (@"/$API_VERSION/events", cancellable);
+    }
+
+    private GLib.Object? parse_json (string? json_data, JsonDeserializer deserializer) {
+        try {
+            var parser = new Json.Parser ();
+            parser.load_from_data (json_data);
+            var root_object = parser.get_root ().get_object ();
+            return deserializer (root_object);
+        } catch (Error e) {
+            warning (e.message);
+            return null;
+        }
+    }
+
+    private delegate GLib.Object? JsonDeserializer (Json.Object? json_obj);
 
 }

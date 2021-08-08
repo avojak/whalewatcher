@@ -28,4 +28,8 @@ public class WhaleWatcher.Widgets.Sidebar.ImagesEntry : WhaleWatcher.Widgets.Sid
         );
     }
 
+    public override string get_name () {
+        return "images";
+    }
+
 }

@@ -25,7 +25,7 @@ public class WhaleWatcher.MainLayout : Gtk.Grid {
 
     private WhaleWatcher.Widgets.HeaderBar header_bar;
     private WhaleWatcher.Widgets.Sidebar.SidebarWidget side_bar;
-    private WhaleWatcher.Widgets.MainView main_view;
+    private Gtk.Stack stack;
 
     public MainLayout (WhaleWatcher.MainWindow window) {
         Object (
@@ -39,14 +39,18 @@ public class WhaleWatcher.MainLayout : Gtk.Grid {
         header_context.add_class ("default-decoration");
 
         side_bar = new WhaleWatcher.Widgets.Sidebar.SidebarWidget ();
+        side_bar.row_selected.connect ((entry_name) => {
+            stack.set_visible_child_name (entry_name);
+        });
 
-        main_view = new WhaleWatcher.Widgets.MainView ();
+        stack = new Gtk.Stack ();
+        stack.add_named (new WhaleWatcher.Views.ImagesView (), "images");
 
         Gtk.Paned paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
         paned.position = 240;
         paned.expand = true;
         paned.pack1 (side_bar, true, false);
-        paned.pack2 (main_view, true, false);
+        paned.pack2 (stack, true, false);
 
         attach (header_bar, 0, 0);
         attach (paned, 0, 1);

@@ -22,7 +22,7 @@
 public class WhaleWatcher.Application : Gtk.Application {
 
     public static GLib.Settings settings;
-    public static WhaleWatcher.Services.DockerClient docker_client;
+    public static WhaleWatcher.Services.DockerService docker_service;
 
     private GLib.List<WhaleWatcher.MainWindow> windows;
 
@@ -48,7 +48,7 @@ public class WhaleWatcher.Application : Gtk.Application {
         settings = new GLib.Settings (Constants.APP_ID);
         windows = new GLib.List<WhaleWatcher.MainWindow> ();
 
-        docker_client = WhaleWatcher.Services.DockerClient.instance;
+        docker_service = WhaleWatcher.Services.DockerService.instance;
 
         startup.connect ((handler) => {
             Hdy.init ();
@@ -77,11 +77,6 @@ public class WhaleWatcher.Application : Gtk.Application {
 
     protected override void activate () {
         this.add_new_window ();
-
-        //  docker_client.get_info ();
-        //  docker_client.ping ();
-        docker_client.get_version ();
-        //  docker_client.get_images ();
     }
 
     public static int main (string[] args) {

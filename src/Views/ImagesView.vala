@@ -19,7 +19,7 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Widgets.MainView : Gtk.Grid {
+public class WhaleWatcher.Views.ImagesView : Gtk.Grid {
 
     construct {
         

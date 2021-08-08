@@ -54,4 +54,6 @@ public abstract class WhaleWatcher.Widgets.Sidebar.SidebarEntry : Gtk.ListBoxRow
         add (grid);
     }
 
+    public abstract string get_name ();
+
 }

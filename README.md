@@ -7,7 +7,7 @@ WhaleWatcher is a native Linux Docker desktop client built in Vala and GTK for [
 You can install WhaleWatcher by compiling from source. Here's the list of
 dependencies required:
 
-- `granite (>= 0.5.1)`
+- `granite (>= 0.6.0)`
 - `debhelper (>= 10.5.1)`
 - `gettext`
 - `libgtk-3-dev (>= 3.10)`

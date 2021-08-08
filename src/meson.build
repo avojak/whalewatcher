@@ -13,16 +13,18 @@ whalewatcher_files = files(
     join_paths('Application.vala'),
     join_paths('MainWindow.vala'),
     join_paths('MainLayout.vala'),
+    join_paths('Models', 'DockerVersion.vala'),
     join_paths('Services', 'DockerClient.vala'),
+    join_paths('Services', 'DockerService.vala'),
     join_paths('Services', 'SocketRestClient.vala'),
     join_paths('Widgets', 'HeaderBar.vala'),
-    join_paths('Widgets', 'MainView.vala'),
     join_paths('Widgets', 'Sidebar', 'ImagesEntry.vala'),
     join_paths('Widgets', 'Sidebar', 'ContainersEntry.vala'),
     join_paths('Widgets', 'Sidebar', 'NetworksEntry.vala'),
     join_paths('Widgets', 'Sidebar', 'VolumesEntry.vala'),
     join_paths('Widgets', 'Sidebar', 'SidebarWidget.vala'),
-    join_paths('Widgets', 'Sidebar', 'SidebarEntry.vala')
+    join_paths('Widgets', 'Sidebar', 'SidebarEntry.vala'),
+    join_paths('Views', 'ImagesView.vala')
 )
 
 # Create a new executable, list the files we want to compile, list the dependencies we need, and install

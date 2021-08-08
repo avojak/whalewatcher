@@ -42,19 +42,25 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         move (WhaleWatcher.Application.settings.get_int ("pos-x"), WhaleWatcher.Application.settings.get_int ("pos-y"));
         resize (WhaleWatcher.Application.settings.get_int ("window-width"), WhaleWatcher.Application.settings.get_int ("window-height"));
 
-        // Close connections when the window is closed
-        //  this.destroy.connect (() => {
-        //      //  // Disconnect this signal so that we don't modify the setting to
-        //      //  // show servers as disabled, when in reality they were enabled prior
-        //      //  // to closing the application.
-        //      //  main_layout.side_panel.server_row_disabled.disconnect (Iridium.Application.connection_repository.on_server_row_disabled);
+        // Close streaming connection when the window is closed
+        this.destroy.connect (() => {
+            //  // Disconnect this signal so that we don't modify the setting to
+            //  // show servers as disabled, when in reality they were enabled prior
+            //  // to closing the application.
+            //  main_layout.side_panel.server_row_disabled.disconnect (Iridium.Application.connection_repository.on_server_row_disabled);
 
-        //      // TODO: Not sure if this is right…
-        //      //  WhaleWatcher.Application.docker_client.close ();
-        //      GLib.Process.exit (0);
-        //  });
+            // TODO: Not sure if this is right…
+            //  WhaleWatcher.Application.docker_client.close ();
+            WhaleWatcher.Application.docker_service.stop_streaming ();
+            GLib.Process.exit (0);
+        });
 
         this.delete_event.connect (before_destroy);
+
+        WhaleWatcher.Application.docker_service.version_received.connect (on_version_received);
+
+        WhaleWatcher.Application.docker_service.start_streaming ();
+        WhaleWatcher.Application.docker_service.request_version ();
 
         show_app ();
     }
@@ -81,6 +87,10 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         WhaleWatcher.Application.settings.set_int ("pos-y", y);
         WhaleWatcher.Application.settings.set_int ("window-width", width);
         WhaleWatcher.Application.settings.set_int ("window-height", height);
+    }
+
+    private void on_version_received (WhaleWatcher.Models.DockerVersion version) {
+        print (version.to_string ());
     }
 
 }

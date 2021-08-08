@@ -28,4 +28,8 @@ public class WhaleWatcher.Widgets.Sidebar.VolumesEntry : WhaleWatcher.Widgets.Si
         );
     }
 
+    public override string get_name () {
+        return "volumes";
+    }
+
 }

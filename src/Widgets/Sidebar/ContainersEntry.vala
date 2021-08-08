@@ -28,4 +28,8 @@ public class WhaleWatcher.Widgets.Sidebar.ContainersEntry : WhaleWatcher.Widgets
         );
     }
 
+    public override string get_name () {
+        return "containers";
+    }
+
 }

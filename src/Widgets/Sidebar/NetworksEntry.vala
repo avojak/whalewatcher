@@ -28,4 +28,8 @@ public class WhaleWatcher.Widgets.Sidebar.NetworksEntry : WhaleWatcher.Widgets.S
         );
     }
 
+    public override string get_name () {
+        return "networks";
+    }
+
 }
