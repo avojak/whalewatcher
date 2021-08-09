@@ -30,34 +30,61 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
         );
     }
 
-    public void ping () {
-        get_sync (@"/$API_VERSION/_ping");
+    public WhaleWatcher.Models.DockerServerState ping () {
+        string? json_data = get_sync (@"/$API_VERSION/_ping");
+        if (json_data != null && json_data == "OK") {
+            return new WhaleWatcher.Models.DockerServerState () {
+                state = WhaleWatcher.Models.DockerServerState.State.OK
+            };
+        }
+        return parse_json_obj (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerServerState.from_json (json_obj);
+        }) as WhaleWatcher.Models.DockerServerState;
     }
 
     public void get_info () {
-        get_sync (@"/$API_VERSION/info");
+        string? json_data = get_sync (@"/$API_VERSION/info");
     }
 
     public WhaleWatcher.Models.DockerVersion? get_version () {
         string? json_data = get_sync (@"/$API_VERSION/version");
-        return parse_json (json_data, (json_obj) => {
+        return parse_json_obj (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerVersion.from_json (json_obj);
         }) as WhaleWatcher.Models.DockerVersion;
     }
 
-    public void get_images () {
-        get_sync (@"/$API_VERSION/images/json");
+    public Gee.List<WhaleWatcher.Models.DockerImage> get_images () {
+        string? json_data = get_sync (@"/$API_VERSION/images/json");
+        return parse_json_array (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerImage.from_json (json_obj);
+        }) as Gee.List<WhaleWatcher.Models.DockerImage>;
     }
 
     public void get_containers () {
-        get_sync (@"/$API_VERSION/containers/json");
+        string? json_data = get_sync (@"/$API_VERSION/containers/json");
     }
 
     public void stream_events (Cancellable cancellable) {
         get_stream (@"/$API_VERSION/events", cancellable);
     }
 
-    private GLib.Object? parse_json (string? json_data, JsonDeserializer deserializer) {
+    private Gee.List<GLib.Object>? parse_json_array (string? json_data, JsonDeserializer deserializer) {
+        try {
+            var parser = new Json.Parser ();
+            parser.load_from_data (json_data);
+            var root_array = parser.get_root ().get_array ();
+            var results = new Gee.ArrayList<GLib.Object> ();
+            foreach (var item in root_array.get_elements ()) {
+                results.add (deserializer (item.get_object ()));
+            }
+            return results;
+        } catch (Error e) {
+            warning (e.message);
+            return null;
+        }
+    }
+
+    private GLib.Object? parse_json_obj (string? json_data, JsonDeserializer deserializer) {
         try {
             var parser = new Json.Parser ();
             parser.load_from_data (json_data);

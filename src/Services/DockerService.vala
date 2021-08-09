@@ -62,6 +62,10 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         streaming_cancellable.cancel ();
     }
 
+    public void ping () {
+        docker_client.ping ();
+    }
+
     public void request_version () {
         new Thread<void> (null, () => {
             WhaleWatcher.Models.DockerVersion? version = docker_client.get_version ();
@@ -71,6 +75,16 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         });
     }
 
+    public void request_images () {
+        new Thread<void> (null, () => {
+            Gee.List<WhaleWatcher.Models.DockerImage>? images = docker_client.get_images ();
+            if (images != null) {
+                images_received (images);
+            }
+        });
+    }
+
     public signal void version_received (WhaleWatcher.Models.DockerVersion version);
+    public signal void images_received (Gee.List<WhaleWatcher.Models.DockerImage> images);
 
 }

@@ -51,10 +51,12 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         IOStream connection = connect_to_socket ();
         DataInputStream input_stream = new DataInputStream (connection.input_stream);
         DataOutputStream output_stream = new DataOutputStream (connection.output_stream);
+
         // Send the request for the stream
         send_output (output_stream, REQUEST_MESSAGE_FORMAT.printf (HttpMethod.GET.to_string (), endpoint));
         uint status_code = read_status_code (input_stream, cancellable);
         Soup.MessageHeaders headers = read_headers (input_stream, cancellable);
+        
         // Read the stream until cancelled
         while (!cancellable.is_cancelled ()) {
             try {
