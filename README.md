@@ -59,3 +59,11 @@ Generate translations for the languages listed in the `po/LINGUAS` files:
 ```
 $ ninja -C build com.github.avojak.whalewatcher-update-po
 ```
+
+## Debugging
+
+To test executing REST requests against the Docker engine manually, you can use curl:
+
+```bash
+$ curl --unix-socket /var/run/docker.sock -X GET "http:/v1.41/images/json"
+```

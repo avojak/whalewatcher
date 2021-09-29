@@ -60,7 +60,7 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         WhaleWatcher.Application.docker_service.version_received.connect (on_version_received);
         WhaleWatcher.Application.docker_service.images_received.connect (on_images_received);
 
-        //  WhaleWatcher.Application.docker_service.start_streaming ();
+        WhaleWatcher.Application.docker_service.start_streaming ();
         //  WhaleWatcher.Application.docker_service.request_version ();
         WhaleWatcher.Application.docker_service.request_images ();
         
@@ -100,6 +100,7 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         foreach (var image in images) {
             print (image.to_string ());
         }
+        main_layout.show_images (images);
     }
 
 }

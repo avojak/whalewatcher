@@ -25,8 +25,8 @@
     public string parent_id { set; get; }
     public Gee.List<string> repo_tags { set; get; }
     public Gee.List<string> repo_digests { set; get; }
-    public double created { set; get; }
-    public double size { set; get; }
+    public int64 created { set; get; }
+    public uint64 size { set; get; }
     public double virtual_size { set; get; }
     public double shared_size { set; get; }
     public double containers { set; get; }
@@ -56,10 +56,10 @@
                     obj.repo_digests = repo_digests;
                     break;
                 case "Created":
-                    obj.created = json.get_double_member (name);
+                    obj.created = json.get_int_member (name);
                     break;
                 case "Size":
-                    obj.size = json.get_double_member (name);
+                    obj.size = uint64.parse (json.get_double_member (name).to_string ());
                     break;
                 case "VirtualSize":
                     obj.virtual_size = json.get_double_member (name);
@@ -90,6 +90,15 @@
         sb.append_printf ("shared_size = %s\n", shared_size.to_string ());
         sb.append_printf ("containers = %s\n", containers.to_string ());
         return (owned) sb.str;
+    }
+
+    public string get_name () {
+        // Even when there's an image with no tags, it will have a RepoTags entry of "<none>:<none>"
+        return repo_tags.get (0).split (":")[0];
+    }
+
+    public string get_short_id () {
+        return id.split(":")[1].substring (0, 12);
     }
 
 }

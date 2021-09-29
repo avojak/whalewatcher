@@ -26,7 +26,11 @@ whalewatcher_files = files(
     join_paths('Widgets', 'Sidebar', 'VolumesEntry.vala'),
     join_paths('Widgets', 'Sidebar', 'SidebarWidget.vala'),
     join_paths('Widgets', 'Sidebar', 'SidebarEntry.vala'),
-    join_paths('Views', 'ImagesView.vala')
+    join_paths('Views', 'ImagesView.vala'),
+    join_paths('Views', 'ContainersView.vala'),
+    join_paths('Views', 'VolumesView.vala'),
+    join_paths('Views', 'NetworksView.vala'),
+    join_paths('Views', 'WelcomeView.vala')
 )
 
 # Create a new executable, list the files we want to compile, list the dependencies we need, and install
