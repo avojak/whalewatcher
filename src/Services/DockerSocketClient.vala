@@ -19,12 +19,12 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRestClient {
+public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.SocketRestClient {
 
     private const string SOCKET_FILE = "/var/run/docker.sock";
     private const string API_VERSION = "v1.41";
 
-    public DockerClient () {
+    public DockerSocketClient () {
         Object (
             socket_file: SOCKET_FILE
         );
@@ -37,7 +37,7 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
                 state = WhaleWatcher.Models.DockerServerState.State.OK
             };
         }
-        return parse_json_obj (json_data, (json_obj) => {
+        return WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerServerState.from_json (json_obj);
         }) as WhaleWatcher.Models.DockerServerState;
     }
@@ -48,14 +48,14 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
 
     public WhaleWatcher.Models.DockerVersion? get_version () {
         string? json_data = get_sync (@"/$API_VERSION/version");
-        return parse_json_obj (json_data, (json_obj) => {
+        return WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerVersion.from_json (json_obj);
         }) as WhaleWatcher.Models.DockerVersion;
     }
 
     public Gee.List<WhaleWatcher.Models.DockerImage> get_images () {
         string? json_data = get_sync (@"/$API_VERSION/images/json");
-        return parse_json_array (json_data, (json_obj) => {
+        return WhaleWatcher.Util.JsonUtils.parse_json_array (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerImage.from_json (json_obj);
         }) as Gee.List<WhaleWatcher.Models.DockerImage>;
     }
@@ -68,34 +68,36 @@ public class WhaleWatcher.Services.DockerClient : WhaleWatcher.Services.SocketRe
         get_stream (@"/$API_VERSION/events", cancellable);
     }
 
-    private Gee.List<GLib.Object>? parse_json_array (string? json_data, JsonDeserializer deserializer) {
+    protected override void read_stream (GLib.DataInputStream input_stream, GLib.Cancellable? cancellable) {
+        var event = read_event (input_stream, cancellable);
+        if (event != null) {
+            event_received (event);
+        }
+    }
+
+    private string? read_event (DataInputStream input_stream, Cancellable? cancellable) {
+        // Events come in sets of three lines:
         try {
-            var parser = new Json.Parser ();
-            parser.load_from_data (json_data);
-            var root_array = parser.get_root ().get_array ();
-            var results = new Gee.ArrayList<GLib.Object> ();
-            foreach (var item in root_array.get_elements ()) {
-                results.add (deserializer (item.get_object ()));
+            // 1. Content length followed by a carriage return. Read this as a hexidecimal string.
+            long content_length = long.parse (input_stream.read_line_utf8 (null, cancellable).replace ("\r", ""), 16);
+            // 2. The content
+            var content = read_content (input_stream, content_length, cancellable).strip ();
+            // 3. A single carriage return
+            var carriage_return = input_stream.read_line_utf8 (null, cancellable);
+            if (carriage_return != "\r") {
+                warning ("Expected carriage return at end of event, but was %s", carriage_return);
             }
-            return results;
-        } catch (Error e) {
-            warning (e.message);
+            return content;
+        } catch (GLib.IOError e) {
+            if (e.message == "Socket I/O timed out") {
+                // Suppress these timeouts which are expected if there are no events on the stream
+            } else {
+                critical ("IOError while reading stream: %s", e.message);
+            }
             return null;
         }
     }
 
-    private GLib.Object? parse_json_obj (string? json_data, JsonDeserializer deserializer) {
-        try {
-            var parser = new Json.Parser ();
-            parser.load_from_data (json_data);
-            var root_object = parser.get_root ().get_object ();
-            return deserializer (root_object);
-        } catch (Error e) {
-            warning (e.message);
-            return null;
-        }
-    }
-
-    private delegate GLib.Object? JsonDeserializer (Json.Object? json_obj);
+    public signal void event_received (string event);
 
 }

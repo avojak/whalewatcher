@@ -21,14 +21,14 @@
 
 public class WhaleWatcher.Services.DockerService : GLib.Object {
 
-    public WhaleWatcher.Services.DockerClient docker_client { get; construct; }
+    public WhaleWatcher.Services.DockerSocketClient docker_client { get; construct; }
 
     private static WhaleWatcher.Services.DockerService _instance = null;
 
     public static WhaleWatcher.Services.DockerService instance {
         get {
             if (_instance == null) {
-                _instance = new WhaleWatcher.Services.DockerService (new WhaleWatcher.Services.DockerClient ());
+                _instance = new WhaleWatcher.Services.DockerService (new WhaleWatcher.Services.DockerSocketClient ());
             }
             return _instance;
         }
@@ -37,10 +37,19 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
     private Thread<int>? streaming_thread;
     private Cancellable streaming_cancellable = new Cancellable ();
 
-    private DockerService (WhaleWatcher.Services.DockerClient docker_client) {
+    private DockerService (WhaleWatcher.Services.DockerSocketClient docker_client) {
         Object (
             docker_client: docker_client
         );
+    }
+
+    private Gee.List<WhaleWatcher.Models.DockerImage>? images;
+
+    construct {
+        images = new Gee.ArrayList<WhaleWatcher.Models.DockerImage> ();
+
+        // Connect to signals
+        docker_client.event_received.connect (on_event_received);
     }
 
     public void start_streaming () {
@@ -77,11 +86,56 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
 
     public void request_images () {
         new Thread<void> (null, () => {
-            Gee.List<WhaleWatcher.Models.DockerImage>? images = docker_client.get_images ();
-            if (images != null) {
+            Gee.List<WhaleWatcher.Models.DockerImage>? new_images = docker_client.get_images ();
+            if (new_images != null) {
+                this.images = new_images;
                 images_received (images);
             }
         });
+    }
+
+    /*
+     * Signal Handlers
+     */
+    
+    private void on_event_received (string event) {
+        Json.Object? obj = WhaleWatcher.Util.JsonUtils.get_json_object (event);
+        switch (obj.get_string_member ("Type")) {
+            case WhaleWatcher.Models.Event.ImageEvent.TYPE:
+                on_image_event_received (WhaleWatcher.Util.JsonUtils.parse_json_obj (event, (json_obj) => {
+                    return WhaleWatcher.Models.Event.ImageEvent.from_json (json_obj);
+                }) as WhaleWatcher.Models.Event.ImageEvent);
+                break;
+            default:
+                warning ("Unsupported event type");
+                break;
+        }
+    }
+
+    private void on_image_event_received (WhaleWatcher.Models.Event.ImageEvent event) {
+        request_images ();
+        switch (event.action) {
+            case DELETE:
+                break;
+            case IMPORT:
+                break;
+            case LOAD:
+                break;
+            case PULL:
+                break;
+            case PUSH:
+                break;
+            case SAVE:
+                break;
+            case TAG:
+                break;
+            case UNTAG:
+                break;
+            case PRUNE:
+                break;
+            default:
+                assert_not_reached ();
+        }
     }
 
     public signal void version_received (WhaleWatcher.Models.DockerVersion version);

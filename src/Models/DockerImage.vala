@@ -19,7 +19,7 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
- public class WhaleWatcher.Models.DockerImage : GLib.Object {
+public class WhaleWatcher.Models.DockerImage : GLib.Object {
 
     public string id { set; get; }
     public string parent_id { set; get; }

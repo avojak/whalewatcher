@@ -23,6 +23,8 @@ public class WhaleWatcher.Views.ImagesView : Gtk.Grid {
 
     public const string TITLE = _("Images");
 
+    private static Gtk.CssProvider provider;
+
     // I'm not 100% sure why this needs to be static - but they did it over
     // here: https://github.com/xfce-mirror/xfmpc/blob/921fa89585d61b7462e30bac5caa9b2f583dd491/src/playlist.vala
     // And it doesn't work otherwise...
@@ -38,7 +40,16 @@ public class WhaleWatcher.Views.ImagesView : Gtk.Grid {
         TAG,
         ID,
         CREATED,
-        SIZE
+        SIZE;
+
+        public static Column[] all () {
+            return { NAME, TAG, ID, CREATED, SIZE };
+        }
+    }
+
+    static construct {
+        provider = new Gtk.CssProvider ();
+        provider.load_from_resource ("com/github/avojak/whalewatcher/TreeView.css");
     }
 
     construct {
@@ -85,18 +96,30 @@ public class WhaleWatcher.Views.ImagesView : Gtk.Grid {
         tree_view.expand = true;
         tree_view.headers_visible = true;
         tree_view.enable_tree_lines = true;
+        //  tree_view.enable_grid_lines = Gtk.TreeViewGridLines.HORIZONTAL;
         tree_view.fixed_height_mode = true;
 
-        placeholder_list_store = new Gtk.ListStore (5, typeof (string), typeof (string), typeof (string), typeof (string), typeof (string));
-        list_store = new Gtk.ListStore (5, typeof (string), typeof (string), typeof (string), typeof (string), typeof (string));
+        placeholder_list_store = new Gtk.ListStore (Column.all ().length, typeof (string), typeof (string), typeof (string), typeof (string), typeof (string));
+        list_store = new Gtk.ListStore (Column.all ().length, typeof (string), typeof (string), typeof (string), typeof (string), typeof (string));
+
+        // TODO: Set sort func on list_store
         filter = new Gtk.TreeModelFilter (list_store, null);
         filter.set_visible_func ((Gtk.TreeModelFilterVisibleFunc) filter_func);
 
-        tree_view.insert_column_with_attributes (-1, "", new Gtk.CellRendererText (), "text", Column.NAME);
-        tree_view.insert_column_with_attributes (-1, _("Tag"), new Gtk.CellRendererText (), "text", Column.TAG);
-        tree_view.insert_column_with_attributes (-1, _("Image ID"), new Gtk.CellRendererText (), "text", Column.ID);
-        tree_view.insert_column_with_attributes (-1, _("Created"), new Gtk.CellRendererText (), "text", Column.CREATED);
-        tree_view.insert_column_with_attributes (-1, _("Size"), new Gtk.CellRendererText (), "text", Column.SIZE);
+        var cell_renderer = new Gtk.CellRendererText ();
+        cell_renderer.ellipsize = Pango.EllipsizeMode.END;
+
+        tree_view.insert_column_with_attributes (-1, "", cell_renderer, "text", Column.NAME);
+        tree_view.insert_column_with_attributes (-1, _("Tag"), cell_renderer, "text", Column.TAG);
+        tree_view.insert_column_with_attributes (-1, _("Image ID"), cell_renderer, "text", Column.ID);
+        tree_view.insert_column_with_attributes (-1, _("Created"), cell_renderer, "text", Column.CREATED);
+        tree_view.insert_column_with_attributes (-1, _("Size"), cell_renderer, "text", Column.SIZE);
+
+        foreach (var column in tree_view.get_columns ()) {
+            column.resizable = true;
+            column.min_width = 150;
+        }
+
 
         // Use a placeholder list store with no data to ensure that the tree view will render the column
         // headers and the proper size while the real data is being loaded in the background.

@@ -59,19 +59,7 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         
         // Read the stream until cancelled
         while (!cancellable.is_cancelled ()) {
-            try {
-                string line = input_stream.read_line_utf8 (null, cancellable);
-                if (line != null) {
-                    debug (@"$line");
-                    // TODO: handle line
-                }
-            } catch (GLib.IOError e) {
-                if (e.message == "Socket I/O timed out") {
-                    // Suppress these timeouts which are expected if there are no events on the stream
-                } else {
-                    critical ("IOError while reading stream: %s", e.message);
-                }
-            }
+            read_stream (input_stream, cancellable);
         }
     }
 
@@ -140,7 +128,7 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         if (headers.get_one ("Transfer-Encoding") == "chunked") {
             return read_chunked (input_stream, cancellable);
         } else if (headers.get_one ("Content-Length") != null) {
-            int content_length = int.parse (headers.get_one ("Content-Length"));
+            long content_length = long.parse (headers.get_one ("Content-Length"));
             return read_content (input_stream, content_length, cancellable);
         } else {
             // TODO: Handle this! Read until end of stream
@@ -148,13 +136,13 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         }
     }
 
-    private string? read_content (DataInputStream input_stream, int content_length, Cancellable? cancellable) {
+    protected string? read_content (DataInputStream input_stream, long content_length, Cancellable? cancellable) {
         try {
             uint8[] buffer = new uint8[content_length];
             input_stream.read (buffer, cancellable);
             string line = (string) buffer;
             if (WhaleWatcher.Application.is_dev_mode ()) {
-                debug (@"$line\n");
+                debug (@"$line");
             }
             return line;
         } catch (GLib.Error e) {
@@ -260,5 +248,7 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         bool is_5xx = status_code.to_string ()[0] == '5';
         return is_4xx || is_5xx;
     }
+
+    protected abstract void read_stream (DataInputStream input_stream, Cancellable? cancellable);
 
 }
