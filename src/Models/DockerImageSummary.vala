@@ -19,7 +19,7 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Models.DockerImage : GLib.Object {
+public class WhaleWatcher.Models.DockerImageSummary : GLib.Object {
 
     public string id { set; get; }
     public string parent_id { set; get; }
@@ -31,8 +31,8 @@ public class WhaleWatcher.Models.DockerImage : GLib.Object {
     public double shared_size { set; get; }
     public double containers { set; get; }
 
-    public static WhaleWatcher.Models.DockerImage from_json (Json.Object json) {
-        var obj = new WhaleWatcher.Models.DockerImage ();
+    public static WhaleWatcher.Models.DockerImageSummary from_json (Json.Object json) {
+        var obj = new WhaleWatcher.Models.DockerImageSummary ();
         foreach (unowned string name in json.get_members ()) {
             switch (name) {
                 case "Id":
@@ -43,14 +43,30 @@ public class WhaleWatcher.Models.DockerImage : GLib.Object {
                     break;
                 case "RepoTags":
                     var repo_tags = new Gee.ArrayList<string> ();
-                    foreach (var element in json.get_array_member (name).get_elements ()) {
+                    var member = json.get_member (name);
+                    if (member == null || member.is_null ()) {
+                        break;
+                    }
+                    var array = member.get_array ();
+                    if (array == null) {
+                        break;
+                    }
+                    foreach (var element in array.get_elements ()) {
                         repo_tags.add (element.get_string ());
                     }
                     obj.repo_tags = repo_tags;
                     break;
                 case "RepoDigests":
                     var repo_digests = new Gee.ArrayList<string> ();
-                    foreach (var element in json.get_array_member (name).get_elements ()) {
+                    var member = json.get_member (name);
+                    if (member == null || member.is_null ()) {
+                        break;
+                    }
+                    var array = member.get_array ();
+                    if (array == null) {
+                        break;
+                    }
+                    foreach (var element in array.get_elements ()) {
                         repo_digests.add (element.get_string ());
                     }
                     obj.repo_digests = repo_digests;
@@ -83,7 +99,7 @@ public class WhaleWatcher.Models.DockerImage : GLib.Object {
         sb.append_printf ("id = %s\n", id.to_string ());
         sb.append_printf ("parent_id = %s\n", parent_id.to_string ());
         sb.append_printf ("repo_tags = %s\n", repo_tags.get (0).to_string ());
-        sb.append_printf ("repo_digests = %s\n", repo_digests.get (0).to_string ());
+        sb.append_printf ("repo_digests = %s\n", repo_digests.is_empty ? "" : repo_digests.get (0).to_string ());
         sb.append_printf ("created = %s\n", created.to_string ());
         sb.append_printf ("size = %s\n", size.to_string ());
         sb.append_printf ("virtual_size = %s\n", virtual_size.to_string ());

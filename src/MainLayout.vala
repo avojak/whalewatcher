@@ -86,7 +86,11 @@ public class WhaleWatcher.MainLayout : Gtk.Grid {
         });
     }
 
-    public void show_images (Gee.List<WhaleWatcher.Models.DockerImage> images) {
+    public void show_layers_size (uint64 layers_size) {
+        images_view.show_layers_size (layers_size);
+    }
+
+    public void show_images (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {
         images_view.set_images (images);
     }
 

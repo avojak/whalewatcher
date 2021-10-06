@@ -53,11 +53,18 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
         }) as WhaleWatcher.Models.DockerVersion;
     }
 
-    public Gee.List<WhaleWatcher.Models.DockerImage> get_images () {
+    public WhaleWatcher.Models.DockerSystemDataUsage get_system_data_usage () {
+        string? json_data = get_sync (@"/$API_VERSION/system/df");
+        return WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerSystemDataUsage.from_json (json_obj);
+        }) as WhaleWatcher.Models.DockerSystemDataUsage;
+    }
+
+    public Gee.List<WhaleWatcher.Models.DockerImageSummary> get_images () {
         string? json_data = get_sync (@"/$API_VERSION/images/json");
         return WhaleWatcher.Util.JsonUtils.parse_json_array (json_data, (json_obj) => {
-            return WhaleWatcher.Models.DockerImage.from_json (json_obj);
-        }) as Gee.List<WhaleWatcher.Models.DockerImage>;
+            return WhaleWatcher.Models.DockerImageSummary.from_json (json_obj);
+        }) as Gee.List<WhaleWatcher.Models.DockerImageSummary>;
     }
 
     public void get_containers () {

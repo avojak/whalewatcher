@@ -152,24 +152,30 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
     }
 
     private string? read_chunked (DataInputStream input_stream, Cancellable? cancellable) {
-        try {
-            string line = null;
-            while ((line = input_stream.read_line_utf8 (null, cancellable).strip ()) != "") {
-                if (WhaleWatcher.Application.is_dev_mode ()) {
-                    debug (@"$line\n");
-                }
-                // TODO: Need to join lines
+        var sb = new GLib.StringBuilder ();
+        string? chunk = null;
+        while ((chunk = read_chunk (input_stream, cancellable)) != null) {
+            if (WhaleWatcher.Application.is_dev_mode ()) {
+                sb.append (chunk);
             }
-            return line;
-        } catch (GLib.IOError e) {
-            critical ("IOError while reading chunked content: %s", e.message);
-            return null;
         }
+        return sb.str;
     }
 
-    private string? read_chunk () {
-        // TODO
-        return null;
+    private string? read_chunk (DataInputStream input_stream, Cancellable? cancellable) {
+        try {
+            // 1. Content length followed by a carriage return. Read this as a hexidecimal string.
+            long content_length = long.parse (input_stream.read_line_utf8 (null, cancellable).replace ("\r", ""), 16);
+            // Last chunk when reading chunked data is simply length 0, so return null to signify end
+            if (content_length == 0) {
+                return null;
+            }
+            // 2. The content
+            return read_content (input_stream, content_length, cancellable).strip ();
+        } catch (GLib.IOError e) {
+            critical ("IOError while reading chunk content: %s", e.message);
+            return null;
+        }
     }
 
     private bool should_keep_reading (string? line) {

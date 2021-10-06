@@ -57,12 +57,13 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
 
         this.delete_event.connect (before_destroy);
 
+        WhaleWatcher.Application.docker_service.layers_size_received.connect (on_layers_size_received);
         WhaleWatcher.Application.docker_service.version_received.connect (on_version_received);
         WhaleWatcher.Application.docker_service.images_received.connect (on_images_received);
 
         WhaleWatcher.Application.docker_service.start_streaming ();
         //  WhaleWatcher.Application.docker_service.request_version ();
-        WhaleWatcher.Application.docker_service.request_images ();
+        WhaleWatcher.Application.docker_service.request_system_data_usage ();
         
 
         show_app ();
@@ -92,14 +93,18 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         WhaleWatcher.Application.settings.set_int ("window-height", height);
     }
 
+    private void on_layers_size_received (uint64 layers_size) {
+        main_layout.show_layers_size (layers_size);
+    }
+
     private void on_version_received (WhaleWatcher.Models.DockerVersion version) {
         print (version.to_string ());
     }
 
-    private void on_images_received (Gee.List<WhaleWatcher.Models.DockerImage> images) {
-        foreach (var image in images) {
-            print (image.to_string ());
-        }
+    private void on_images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {
+        //  foreach (var image in images) {
+        //      print (image.to_string ());
+        //  }
         main_layout.show_images (images);
     }
 

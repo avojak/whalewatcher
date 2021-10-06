@@ -43,10 +43,10 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         );
     }
 
-    private Gee.List<WhaleWatcher.Models.DockerImage>? images;
+    private Gee.List<WhaleWatcher.Models.DockerImageSummary>? images;
 
     construct {
-        images = new Gee.ArrayList<WhaleWatcher.Models.DockerImage> ();
+        images = new Gee.ArrayList<WhaleWatcher.Models.DockerImageSummary> ();
 
         // Connect to signals
         docker_client.event_received.connect (on_event_received);
@@ -84,14 +84,33 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         });
     }
 
+    public void request_system_data_usage () {
+        new Thread<void> (null, () => {
+            WhaleWatcher.Models.DockerSystemDataUsage? system_data_usage = docker_client.get_system_data_usage ();
+            if (system_data_usage != null) {
+                layers_size_received (system_data_usage.layers_size);
+                images_received (system_data_usage.images);
+                //  containers_received (system_data_usage.containers);
+                //  volumes_received (system_data_usage.volumes);
+            }
+        });
+    }
+
     public void request_images () {
         new Thread<void> (null, () => {
-            Gee.List<WhaleWatcher.Models.DockerImage>? new_images = docker_client.get_images ();
+            Gee.List<WhaleWatcher.Models.DockerImageSummary>? new_images = docker_client.get_images ();
             if (new_images != null) {
                 this.images = new_images;
+                on_images_received (images);
                 images_received (images);
             }
         });
+    }
+
+    private void on_images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {
+        foreach (var image in images) {
+            //  print ("%s\n", image.shared_size.to_string ());
+        }
     }
 
     /*
@@ -116,21 +135,13 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         request_images ();
         switch (event.action) {
             case DELETE:
-                break;
             case IMPORT:
-                break;
             case LOAD:
-                break;
             case PULL:
-                break;
             case PUSH:
-                break;
             case SAVE:
-                break;
             case TAG:
-                break;
             case UNTAG:
-                break;
             case PRUNE:
                 break;
             default:
@@ -138,7 +149,8 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         }
     }
 
+    public signal void layers_size_received (uint64 layers_size);
     public signal void version_received (WhaleWatcher.Models.DockerVersion version);
-    public signal void images_received (Gee.List<WhaleWatcher.Models.DockerImage> images);
+    public signal void images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images);
 
 }
