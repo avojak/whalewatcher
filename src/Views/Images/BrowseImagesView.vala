@@ -19,81 +19,50 @@
  * Authored by: Andrew Vojak <andrew.vojak@gmail.com>
  */
 
-public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
+public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
 
-    public const string TITLE = _("Containers");
-
+    // I'm not 100% sure why this needs to be static - but they did it over
+    // here: https://github.com/xfce-mirror/xfmpc/blob/921fa89585d61b7462e30bac5caa9b2f583dd491/src/playlist.vala
+    // And it doesn't work otherwise...
     private static Gtk.Entry search_entry;
     private static Gtk.CheckButton in_use_button;
-
-    private Gtk.Stack stack;
-    private Gtk.Grid browse_containers_view;
-    private Gtk.Grid inspect_container_view;
 
     private Gtk.TreeView tree_view;
     private Gtk.ListStore placeholder_list_store;
     private Gtk.ListStore list_store;
     private Gtk.TreeModelFilter filter;
 
+    private Gtk.Label disk_usage_value_label;
+
     private Gtk.Button inspect_button;
-    private Gtk.Button cli_button;
-    private Gtk.Button start_button;
-    private Gtk.Button restart_button;
-    private Gtk.Button delete_button;
+    private Gtk.Button run_button;
+    private Gtk.Button export_button;
+    private Gtk.Button pull_button;
+    //  private Gtk.Button push_button;
+    private Gtk.Button cleanup_button;
 
     enum Column {
-        STATUS_ICON,
-        STATUS_LABEL,
+        IN_USE_ICON,
         NAME,
-        IMAGE;
+        TAG,
+        ID,
+        CREATED,
+        SIZE,
+        IN_USE;
 
         public static Column[] all () {
-            return { STATUS_ICON, STATUS_LABEL, NAME, IMAGE };
+            return { IN_USE_ICON, NAME, TAG, ID, CREATED, SIZE, IN_USE };
         }
     }
 
-    public ContainersView () {
+    public BrowseImagesView () {
         Object (
-            margin: 30,
             row_spacing: 12,
             column_spacing: 10
         );
     }
 
     construct {
-        //  var disk_space_usage_grid = new Gtk.Grid ();
-        //  disk_space_usage_grid.margin = 30;
-        //  disk_space_usage_grid.vexpand = false;
-
-        //  var info = GLib.File.new_for_path ("/var").query_filesystem_info (GLib.FileAttribute.FILESYSTEM_SIZE, null);
-        //  var size = info.get_attribute_uint64 (GLib.FileAttribute.FILESYSTEM_SIZE);
-        //  var total_usage = size / 2;
-        //  var storage = new Granite.Widgets.StorageBar.with_total_usage (size, total_usage);
-
-        //  var disk_usage_label = new Gtk.Label (_("Total size: "));
-        //  disk_usage_value_label = new Gtk.Label ("");
-
-        //  disk_space_usage_grid.attach (disk_usage_label, 0, 0);
-        //  disk_space_usage_grid.attach (disk_usage_value_label, 1, 0);
-
-        browse_containers_view = construct_browse_containers_view ();
-        inspect_container_view = construct_inspect_container_view ();
-
-        stack = new Gtk.Stack ();
-        stack.transition_type = Gtk.StackTransitionType.SLIDE_LEFT_RIGHT;
-        stack.add (browse_containers_view);
-        stack.add (inspect_container_view);
-        stack.set_visible_child (browse_containers_view);
-
-        attach (stack, 0, 0);
-    }
-
-    private Gtk.Grid construct_browse_containers_view () {
-        var grid = new Gtk.Grid () {
-            row_spacing = 12,
-            column_spacing = 10
-        };
-
         search_entry = new Gtk.Entry () {
             placeholder_text = _("Search"),
             sensitive = false,
@@ -119,7 +88,7 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
             filter.refilter ();
         });
 
-        var container_browsing_grid = new Gtk.Grid ();
+        var image_browsing_grid = new Gtk.Grid ();
 
         var scrolled_window = new Gtk.ScrolledWindow (null, null);
         scrolled_window.set_shadow_type (Gtk.ShadowType.ETCHED_IN);
@@ -144,10 +113,13 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         var cell_renderer = new Gtk.CellRendererText ();
         cell_renderer.ellipsize = Pango.EllipsizeMode.END;
 
-        tree_view.insert_column_with_attributes (-1, "", new Gtk.CellRendererPixbuf (), "icon-name", Column.STATUS_ICON);
-        tree_view.insert_column_with_attributes (-1, _("Status"), cell_renderer, "text", Column.STATUS_LABEL);
+        tree_view.insert_column_with_attributes (-1, "", new Gtk.CellRendererPixbuf (), "icon-name", Column.IN_USE_ICON);
         tree_view.insert_column_with_attributes (-1, _("Name"), cell_renderer, "text", Column.NAME);
-        tree_view.insert_column_with_attributes (-1, _("Image"), cell_renderer, "text", Column.IMAGE);
+        tree_view.insert_column_with_attributes (-1, _("Tag"), cell_renderer, "text", Column.TAG);
+        tree_view.insert_column_with_attributes (-1, _("Image ID"), cell_renderer, "text", Column.ID);
+        tree_view.insert_column_with_attributes (-1, _("Created"), cell_renderer, "text", Column.CREATED);
+        tree_view.insert_column_with_attributes (-1, _("Size"), cell_renderer, "text", Column.SIZE);
+        tree_view.insert_column_with_attributes (-1, "", new Gtk.CellRendererText (), "text", Column.IN_USE);
 
         for (int i = 0; i < tree_view.get_n_columns (); i++) {
             if (i == 0) {
@@ -159,15 +131,30 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
             }
         }
 
+        // The IN_USE column is for data purposes, not to display
+        tree_view.get_column (Column.IN_USE).set_visible (false);
+
         // Use a placeholder list store with no data to ensure that the tree view will render the column
         // headers and the proper size while the real data is being loaded in the background.
         tree_view.set_model (placeholder_list_store);
 
+        //  tree_view.notify.connect (evaluate_tree_view_selection);
+        //  tree_view.row_activated.connect (() => {
+        //      evaluate_tree_view_selection ();
+        //  });
+        //  tree_view.cursor_changed.connect (() => {
+        //      evaluate_tree_view_selection ();
+        //  });
         tree_view.get_selection ().changed.connect (evaluate_tree_view_selection);
         tree_view.get_selection ().set_mode (Gtk.SelectionMode.MULTIPLE);
 
         var status_bar = new Gtk.Statusbar () {
             margin = 0
+        };
+
+        disk_usage_value_label = new Gtk.Label ("") {
+            hexpand = true,
+            xalign = 0
         };
 
         // Using the symbolic icons here because the non-symbolic search icon at this size has very poor contrast in dark mode
@@ -177,64 +164,70 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         };
         inspect_button.clicked.connect (on_inspect_button_clicked);
 
-        start_button = new Gtk.Button.from_icon_name ("media-playback-start-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("Start…"),
+        run_button = new Gtk.Button.from_icon_name ("media-playback-start-symbolic", Gtk.IconSize.BUTTON) {
+            tooltip_text = _("Run…"),
             sensitive = false
         };
-        start_button.clicked.connect (() => {
+        run_button.clicked.connect (() => {
             // TODO
         });
 
-        restart_button = new Gtk.Button.from_icon_name ("system-reboot-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("Restart…"),
+        export_button = new Gtk.Button.from_icon_name ("document-export-symbolic", Gtk.IconSize.BUTTON) {
+            tooltip_text = _("Export…"),
             sensitive = false
         };
-        restart_button.clicked.connect (() => {
+        export_button.clicked.connect (() => {
             // TODO
         });
 
-        cli_button = new Gtk.Button.from_icon_name ("utilities-terminal-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("CLI…"),
+        pull_button = new Gtk.Button.from_icon_name ("browser-download-symbolic", Gtk.IconSize.BUTTON) {
+            tooltip_text = _("Pull"),
             sensitive = false
         };
-        cli_button.clicked.connect (() => {
-            // TODO
-        });
+        pull_button.clicked.connect (on_pull_button_clicked);
 
-        delete_button = new Gtk.Button.from_icon_name ("edit-delete-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("Delete…"),
+        //  push_button = new Gtk.Button.from_icon_name ("document-send", Gtk.IconSize.BUTTON) {
+        //      tooltip_text = _("Clean up…")
+        //  };
+        //  push_button.clicked.connect (() => {
+        //      // TODO
+        //  });
+
+        cleanup_button = new Gtk.Button.from_icon_name ("edit-delete-symbolic", Gtk.IconSize.BUTTON) {
+            tooltip_text = _("Remove…"),
             sensitive = false
         };
-        delete_button.clicked.connect (on_delete_button_clicked);
+        cleanup_button.clicked.connect (on_cleanup_button_clicked);
 
         //  status_bar.attach (disk_usage_value_label, 0, 0, 1, 1);
-        //  status_bar.attach (delete_button, 1, 0, 1, 1);
+        //  status_bar.attach (cleanup_button, 1, 0, 1, 1);
 
+        status_bar.get_message_area ().pack_start (disk_usage_value_label, true, true, 4);
         status_bar.get_message_area ().pack_end (inspect_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (start_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (restart_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (cli_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (delete_button, false, false, 4);
+        status_bar.get_message_area ().pack_end (run_button, false, false, 4);
+        status_bar.get_message_area ().pack_end (export_button, false, false, 4);
+        status_bar.get_message_area ().pack_end (pull_button, false, false, 4);
+        status_bar.get_message_area ().pack_end (cleanup_button, false, false, 4);
 
         scrolled_window.add (tree_view);
-        container_browsing_grid.attach (scrolled_window, 0, 1, 2, 1);
-        container_browsing_grid.attach (status_bar, 0, 2, 2, 1);
+        image_browsing_grid.attach (scrolled_window, 0, 1, 2, 1);
+        image_browsing_grid.attach (status_bar, 0, 2, 2, 1);
 
-        grid.attach (search_entry, 0, 0, 1, 1);
-        grid.attach (in_use_button, 1, 0, 1, 1);
-        grid.attach (container_browsing_grid, 0, 1, 2, 1);
-
-        return grid;
-    }
-
-    private Gtk.Grid construct_inspect_container_view () {
-        var grid = new Gtk.Grid ();
-        return grid;
+        attach (search_entry, 0, 0, 1, 1);
+        attach (in_use_button, 1, 0, 1, 1);
+        attach (image_browsing_grid, 0, 1, 2, 1);
     }
 
     private static bool filter_func (Gtk.TreeModel model, Gtk.TreeIter iter) {
         if (search_entry == null) {
             return true;
+        }
+
+        // Filter based on whether the image is in-use
+        bool in_use = true;
+        model.get (iter, Column.IN_USE, out in_use, -1);
+        if (in_use_button.active && !in_use) {
+            return false;
         }
         
         // Filter based on the search string
@@ -244,12 +237,14 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         }
         string name = "";
         string tag = "";
+        string id = "";
         model.get (iter, Column.NAME, out name, -1);
-        model.get (iter, Column.IMAGE, out tag, -1);
-        if (name == null || tag == null) {
+        model.get (iter, Column.TAG, out tag, -1);
+        model.get (iter, Column.ID, out id, -1);
+        if (name == null || tag == null || id == null) {
             return true;
         }
-        if (name.down ().contains (search_string) || tag.down ().contains (search_string)) {
+        if (name.down ().contains (search_string) || tag.down ().contains (search_string) || id.down ().contains (search_string)) {
             return true;
         }
         return false;
@@ -262,41 +257,70 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
 
         // Update the buttons depending on how many rows are selected
         inspect_button.sensitive = num_selected_rows == 1;
-        start_button.sensitive = num_selected_rows == 1;
-        restart_button.sensitive = num_selected_rows > 0;
-        cli_button.sensitive = num_selected_rows == 1;
-        delete_button.sensitive = num_selected_rows > 0;
+        run_button.sensitive = num_selected_rows == 1;
+        export_button.sensitive = num_selected_rows > 0;
+        pull_button.sensitive = num_selected_rows == 1;
+        cleanup_button.sensitive = num_selected_rows > 0;
+
+        if (num_selected_rows == 1) {
+            // TODO: Do this better... don't need to iterate
+            selection.selected_foreach ((model, path, iter) => {
+                GLib.Value name_value;
+                model.get_value (iter, Column.NAME, out name_value);
+                GLib.Value tag_value;
+                model.get_value (iter, Column.TAG, out tag_value);
+                if (name_value.get_string () == "<none>" && tag_value.get_string () == "<none>") {
+                    pull_button.sensitive = false;
+                }
+            });
+        }
     }
 
-    private void on_delete_button_clicked () {
-        cleanup_images_button_clicked (get_selected_containers ());
+    private void on_cleanup_button_clicked () {
+        cleanup_images_button_clicked (get_selected_images ());
     }
 
     private void on_pull_button_clicked () {
-        pull_images_button_clicked (get_selected_containers ());
+        pull_images_button_clicked (get_selected_images ());
     }
 
     private void on_inspect_button_clicked () {
-        inspect_image_button_clicked (get_selected_containers ().get (0));
+        inspect_image_button_clicked (get_selected_images ().get (0));
     }
 
     // Gets the selected images as either name:tag, or ID in the case of <none>:<none>
-    private Gee.List<string> get_selected_containers () {
-        var containers = new Gee.ArrayList<string> ();
+    private Gee.List<string> get_selected_images () {
+        var images = new Gee.ArrayList<string> ();
         tree_view.get_selection ().selected_foreach ((model, path, iter) => {
             GLib.Value name_value;
             model.get_value (iter, Column.NAME, out name_value);
-            containers.add (name_value.get_string ());
+            GLib.Value tag_value;
+            model.get_value (iter, Column.TAG, out tag_value);
+            GLib.Value id_value;
+            model.get_value (iter, Column.ID, out id_value);
+            string name = name_value.get_string ();
+            string tag = tag_value.get_string ();
+            string id = id_value.get_string ();
+            if (name == "<none>" && tag == "<none>") {
+                images.add (@"$id");
+            } else {
+                images.add (@"$name:$tag");
+            }
         });
-        return containers;
+        return images;
     }
 
-    public void set_containers (Gee.List<WhaleWatcher.Models.DockerImageSummary> containers) {
+    public void show_layers_size (uint64 layers_size) {
+        var display_size = GLib.format_size (layers_size, GLib.FormatSizeFlags.DEFAULT);
+        disk_usage_value_label.set_text (_(@"Total size: $display_size"));
+    }
+
+    public void set_images (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {
         // For performance reasons, unset the data model before populating it, then re-add to the tree view once fully populated
         tree_view.set_model (placeholder_list_store);
         search_entry.sensitive = false;
         list_store.clear ();
-        foreach (var entry in containers) {
+        foreach (var entry in images) {
             var display_name = entry.get_name ();
             var display_id = entry.get_short_id ();
             // TODO: Make this a little cleaner (official app shows things like "6 days ago")
@@ -305,14 +329,14 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
             foreach (var tag in entry.repo_tags) {
                 var display_tag = tag.split(":")[1];
                 Gtk.TreeIter iter;
-                //  list_store.append (out iter);
-                //  list_store.set (iter, Column.STATUS_ICON, entry.containers > 0 ? "emblem-enabled" : null,
-                //                               Column.NAME, display_name,
-                //                                Column.IMAGE, display_tag,
-                //                                 Column.ID, display_id,
-                //                            Column.CREATED, display_created,
-                //                               Column.SIZE, display_size,
-                //                             Column.IN_USE, entry.containers > 0);
+                list_store.append (out iter);
+                list_store.set (iter, Column.IN_USE_ICON, entry.containers > 0 ? "emblem-enabled" : null,
+                                             Column.NAME, display_name,
+                                              Column.TAG, display_tag,
+                                               Column.ID, display_id,
+                                          Column.CREATED, display_created,
+                                             Column.SIZE, display_size,
+                                           Column.IN_USE, entry.containers > 0);
             }
         }
         // With the model fully populated, we can now update the view
@@ -321,18 +345,6 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         //  status_label.label = "%s channels found".printf (channels.size.to_string ());
         search_entry.sensitive = true;
     }
-
-    public void show_browse_containers_view () {
-        stack.set_visible_child (browse_containers_view);
-    }
-
-    public void show_inspect_container_view () {
-        stack.set_visible_child (inspect_container_view);
-    }
-
-    //  public void set_image_details (WhaleWatcher.Models.DockerImageDetails image_details) {
-    //      // TODO: update inpsect images view with details
-    //  }
 
     public signal void cleanup_images_button_clicked (Gee.List<string> images);
     public signal void pull_images_button_clicked (Gee.List<string> images);

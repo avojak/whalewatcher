@@ -22,6 +22,20 @@
 public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
 
     private Gee.Map<int, string> view_title_mapping = new Gee.HashMap<int, string> ();
+    private Granite.Widgets.ModeButton view_mode;
+    private Gtk.Button return_button;
+
+    // Image browsing button group
+    private Gtk.Button image_import_button;
+    private Gtk.Button image_inspect_export_button;
+
+    // Image inspect button group
+    private Gtk.Button image_inspect_remove_button;
+    private Gtk.Button image_inspect_pull_button;
+    private Gtk.Button image_inspect_run_button;
+    private Gtk.Separator image_inspect_separator;
+
+    private Gtk.Button user_button;
 
     public HeaderBar () {
         Object (
@@ -45,7 +59,9 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
         view_title_mapping.set (2, WhaleWatcher.Views.VolumesView.TITLE);
         view_title_mapping.set (3, WhaleWatcher.Views.NetworksView.TITLE);
 
-        var view_mode = new Granite.Widgets.ModeButton ();
+        view_mode = new Granite.Widgets.ModeButton ();
+        view_mode.vexpand = false;
+        view_mode.valign = Gtk.Align.CENTER;
         foreach (string value in view_title_mapping.values) {
             view_mode.append_text (value);
         }
@@ -56,9 +72,122 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
 
         set_custom_title (view_mode);
 
-        //  pack_end (mode_switch);
+        return_button = new Gtk.Button ();
+        return_button.no_show_all = true;
+        return_button.valign = Gtk.Align.CENTER;
+        return_button.vexpand = false;
+        return_button.get_style_context ().add_class ("back-button");
+        return_button.clicked.connect (() => {
+            view_return ();
+        });
+
+        user_button = create_headerbar_button ("avatar-default", "Sign in…");
+        user_button.no_show_all = false;
+
+        create_image_inspect_button_group ();
+        create_image_browsing_button_group ();
+
+        // TODO: Revisit how these buttons are arranged
+
+        pack_end (user_button);
+        pack_end (new Gtk.Separator (Gtk.Orientation.VERTICAL));
+
+        // Image browsing button group
+        pack_end (image_import_button);
+
+        // Image inspect button group
+        pack_end (image_inspect_run_button);
+        pack_end (image_inspect_export_button);
+        pack_end (image_inspect_pull_button);
+        pack_end (image_inspect_separator);
+        pack_end (image_inspect_remove_button);
+        
+        pack_start (return_button);
+    }
+
+    private void create_image_browsing_button_group () {
+        image_import_button = create_headerbar_button ("document-import", _("Import…"));
+        image_import_button.clicked.connect (() => {
+            //  image_import_button_clicked ();
+        });
+    }
+
+    private void create_image_inspect_button_group () {
+        image_inspect_remove_button = create_headerbar_button ("edit-delete", "Remove…");
+        image_inspect_remove_button.clicked.connect (() => {
+            //  image_inspect_remove_button_clicked ();
+        });
+
+        image_inspect_pull_button = create_headerbar_button ("browser-download", "Pull");
+        image_inspect_pull_button.clicked.connect (() => {
+            //  image_inspect_pull_button_clicked ();
+        });
+
+        image_inspect_export_button = create_headerbar_button ("document-export", _("Export…"));
+        image_inspect_export_button.clicked.connect (() => {
+            //  image_inspect_export_button_clicked ();
+        });
+
+        image_inspect_run_button = create_headerbar_button ("media-playback-start", "Run…");
+        image_inspect_run_button.clicked.connect (() => {
+            //  image_inspect_run_button_clicked ();
+        });
+
+        image_inspect_separator = new Gtk.Separator (Gtk.Orientation.VERTICAL);
+    }
+
+    private Gtk.Button create_headerbar_button (string icon_name, string? tooltip) {
+        return new Gtk.Button.from_icon_name (icon_name, Gtk.IconSize.LARGE_TOOLBAR) {
+            tooltip_text = tooltip,
+            no_show_all = true,
+            valign = Gtk.Align.CENTER,
+            relief = Gtk.ReliefStyle.NONE
+        };
+    }
+
+    public void set_return_button_label (string? label) {
+        return_button.label = label;
+    }
+
+    public void set_view_mode_button_visible (bool visible) {
+        view_mode.no_show_all = !visible;
+        view_mode.visible = visible;
+    }
+
+    public void set_return_button_visible (bool visible) {
+        return_button.no_show_all = !visible;
+        return_button.visible = visible;
+    }
+
+    public void set_image_inspect_buttons_visible (bool visible) {
+        image_inspect_remove_button.no_show_all = !visible;
+        image_inspect_remove_button.visible = visible;
+        image_inspect_run_button.no_show_all = !visible;
+        image_inspect_run_button.visible = visible;
+        image_inspect_export_button.no_show_all = !visible;
+        image_inspect_export_button.visible = visible;
+        image_inspect_pull_button.no_show_all = !visible;
+        image_inspect_pull_button.visible = visible;
+        image_inspect_separator.no_show_all = !visible;
+        image_inspect_separator.visible = visible;
+    }
+
+    public void set_image_browsing_buttons_visible (bool visible) {
+        image_import_button.no_show_all = !visible;
+        image_import_button.visible = visible;   
+    }
+
+    public void update_title (string? title) {
+        if (title == null) {
+            set_title (null);
+            set_custom_title (view_mode);
+        } else {
+            set_custom_title (null);
+            set_title (title);
+        }
     }
 
     public signal void view_selected (string view_title);
+    public signal void view_return ();
 
 }

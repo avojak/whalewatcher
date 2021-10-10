@@ -49,6 +49,7 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         images = new Gee.ArrayList<WhaleWatcher.Models.DockerImageSummary> ();
 
         // Connect to signals
+        docker_client.error_received.connect (on_error_received);
         docker_client.event_received.connect (on_event_received);
     }
 
@@ -84,6 +85,7 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         });
     }
 
+    // This is kind of a catch-all for images, containers, and volumes
     public void request_system_data_usage () {
         new Thread<void> (null, () => {
             WhaleWatcher.Models.DockerSystemDataUsage? system_data_usage = docker_client.get_system_data_usage ();
@@ -107,6 +109,44 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         });
     }
 
+    public void remove_images (Gee.List<string> image_names, bool force=false) {
+        foreach (var image_name in image_names) {
+            new Thread<void> (null, () => {
+                // An image name is either a name:tag pair or an ID
+                docker_client.remove_image (image_name, force);
+            });
+        }
+    }
+
+    public void pull_images (Gee.List<string> image_names) {
+        foreach (var image_name in image_names) {
+            new Thread<void> (null, () => {
+                // An image name is either a name:tag pair or an ID
+                docker_client.pull_image (image_name);
+            });
+        }
+    }
+
+    public void inspect_image (string image_name) {
+        new Thread<void> (null, () => {
+            // An image name is either a name:tag pair or an ID
+            var image_details = docker_client.inspect_image (image_name);
+            if (image_details != null) {
+                image_details_received (image_details);
+            }
+        });
+    }
+
+    public void request_image_history (string image_name) {
+        new Thread<void> (null, () => {
+            // An image name is either a name:tag pair or an ID
+            var image_history = docker_client.get_image_history (image_name);
+            if (image_history != null) {
+                image_history_received (image_history);
+            }
+        });
+    }
+
     private void on_images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {
         foreach (var image in images) {
             //  print ("%s\n", image.shared_size.to_string ());
@@ -117,6 +157,10 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
      * Signal Handlers
      */
     
+    private void on_error_received (string error, string description, string? error_details) {
+        error_received (error, description, error_details);
+    }
+
     private void on_event_received (string event) {
         Json.Object? obj = WhaleWatcher.Util.JsonUtils.get_json_object (event);
         switch (obj.get_string_member ("Type")) {
@@ -132,7 +176,8 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
     }
 
     private void on_image_event_received (WhaleWatcher.Models.Event.ImageEvent event) {
-        request_images ();
+        //  request_images ();
+        request_system_data_usage ();
         switch (event.action) {
             case DELETE:
             case IMPORT:
@@ -149,8 +194,11 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         }
     }
 
+    public signal void error_received (string error, string description, string? details);
     public signal void layers_size_received (uint64 layers_size);
     public signal void version_received (WhaleWatcher.Models.DockerVersion version);
     public signal void images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images);
+    public signal void image_details_received (WhaleWatcher.Models.DockerImageDetails image_details);
+    public signal void image_history_received (Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history);
 
 }

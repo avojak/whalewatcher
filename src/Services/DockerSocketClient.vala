@@ -31,7 +31,8 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
     }
 
     public WhaleWatcher.Models.DockerServerState ping () {
-        string? json_data = get_sync (@"/$API_VERSION/_ping");
+        string? json_data;
+        get_sync (@"/$API_VERSION/_ping", out json_data);
         if (json_data != null && json_data == "OK") {
             return new WhaleWatcher.Models.DockerServerState () {
                 state = WhaleWatcher.Models.DockerServerState.State.OK
@@ -43,32 +44,78 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
     }
 
     public void get_info () {
-        string? json_data = get_sync (@"/$API_VERSION/info");
+        string? json_data;
+        get_sync (@"/$API_VERSION/info", out json_data);
     }
 
     public WhaleWatcher.Models.DockerVersion? get_version () {
-        string? json_data = get_sync (@"/$API_VERSION/version");
+        string? json_data;
+        get_sync (@"/$API_VERSION/version", out json_data);
         return WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerVersion.from_json (json_obj);
         }) as WhaleWatcher.Models.DockerVersion;
     }
 
     public WhaleWatcher.Models.DockerSystemDataUsage get_system_data_usage () {
-        string? json_data = get_sync (@"/$API_VERSION/system/df");
+        string? json_data;
+        get_sync (@"/$API_VERSION/system/df", out json_data);
         return WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerSystemDataUsage.from_json (json_obj);
         }) as WhaleWatcher.Models.DockerSystemDataUsage;
     }
 
     public Gee.List<WhaleWatcher.Models.DockerImageSummary> get_images () {
-        string? json_data = get_sync (@"/$API_VERSION/images/json");
+        string? json_data;
+        get_sync (@"/$API_VERSION/images/json", out json_data);
         return WhaleWatcher.Util.JsonUtils.parse_json_array (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerImageSummary.from_json (json_obj);
         }) as Gee.List<WhaleWatcher.Models.DockerImageSummary>;
     }
 
+    public void remove_image (string image_name, bool force) {
+        var query_params = new Gee.HashMap<string, string> ();
+        query_params.set ("force", force.to_string ());
+        string? json_data;
+        if (!delete_sync (@"/$API_VERSION/images/$image_name", out json_data, query_params)) {
+            var error_response = WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
+                return WhaleWatcher.Models.DockerEngineErrorResponse.from_json (json_obj);
+            }) as WhaleWatcher.Models.DockerEngineErrorResponse;
+            error_received ("Error while removing image", "There was an error while attempting to remove the image %s. The image may be in use by a running container, or have descendant images.\n\nYou may be able to force remove the image.".printf (image_name), error_response.message);
+        }
+    }
+
+    public void pull_image (string image_name) {
+        // TODO: Add optional auth here
+        var query_params = new Gee.HashMap<string, string> ();
+        query_params.set ("fromImage", image_name);
+        string? json_data;
+        if (!post_sync (@"/$API_VERSION/images/create", out json_data, query_params)) {
+            var error_response = WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
+                return WhaleWatcher.Models.DockerEngineErrorResponse.from_json (json_obj);
+            }) as WhaleWatcher.Models.DockerEngineErrorResponse;
+            error_received ("Error while pulling image", "There was an error while attempting to pull the image %s.".printf (image_name), error_response.message);
+        }
+    }
+
+    public WhaleWatcher.Models.DockerImageDetails? inspect_image (string image_name) {
+        string? json_data;
+        get_sync (@"/$API_VERSION/images/$image_name/json", out json_data);
+        return WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerImageDetails.from_json (json_obj);
+        }) as WhaleWatcher.Models.DockerImageDetails;
+    }
+
+    public Gee.List<WhaleWatcher.Models.DockerImageLayer> get_image_history (string image_name) {
+        string? json_data;
+        get_sync (@"/$API_VERSION/images/$image_name/history", out json_data);
+        return WhaleWatcher.Util.JsonUtils.parse_json_array (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerImageLayer.from_json (json_obj);
+        }) as Gee.List<WhaleWatcher.Models.DockerImageLayer>;
+    }
+
     public void get_containers () {
-        string? json_data = get_sync (@"/$API_VERSION/containers/json");
+        string? json_data;
+        get_sync (@"/$API_VERSION/containers/json", out json_data);
     }
 
     public void stream_events (Cancellable cancellable) {
@@ -86,7 +133,11 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
         // Events come in sets of three lines:
         try {
             // 1. Content length followed by a carriage return. Read this as a hexidecimal string.
-            long content_length = long.parse (input_stream.read_line_utf8 (null, cancellable).replace ("\r", ""), 16);
+            string? line = input_stream.read_line_utf8 (null, cancellable);
+            if (line == null) {
+                return null;
+            }
+            long content_length = long.parse (line.replace ("\r", ""), 16);
             // 2. The content
             var content = read_content (input_stream, content_length, cancellable).strip ();
             // 3. A single carriage return
@@ -106,5 +157,6 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
     }
 
     public signal void event_received (string event);
+    public signal void error_received (string error, string description, string? error_details);
 
 }

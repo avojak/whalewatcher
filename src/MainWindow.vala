@@ -23,7 +23,9 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
 
     public unowned WhaleWatcher.Application app { get; construct; }
 
-    private WhaleWatcher.MainLayout main_layout;
+    private WhaleWatcher.Widgets.ErrorDialog? error_dialog;
+
+    private WhaleWatcher.Layouts.MainLayout main_layout;
 
     public MainWindow (WhaleWatcher.Application application) {
         Object (
@@ -36,7 +38,10 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
     }
 
     construct {
-        main_layout = new WhaleWatcher.MainLayout (this);
+        main_layout = new WhaleWatcher.Layouts.MainLayout (this);
+        main_layout.cleanup_images_button_clicked.connect (on_cleanup_images_button_clicked);
+        main_layout.pull_images_button_clicked.connect (on_pull_images_button_clicked);
+        main_layout.inspect_image_button_clicked.connect (on_inspect_image_button_clicked);
         add (main_layout);
 
         move (WhaleWatcher.Application.settings.get_int ("pos-x"), WhaleWatcher.Application.settings.get_int ("pos-y"));
@@ -57,9 +62,12 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
 
         this.delete_event.connect (before_destroy);
 
+        WhaleWatcher.Application.docker_service.error_received.connect (on_error_received);
         WhaleWatcher.Application.docker_service.layers_size_received.connect (on_layers_size_received);
         WhaleWatcher.Application.docker_service.version_received.connect (on_version_received);
         WhaleWatcher.Application.docker_service.images_received.connect (on_images_received);
+        WhaleWatcher.Application.docker_service.image_details_received.connect (on_image_details_received);
+        WhaleWatcher.Application.docker_service.image_history_received.connect (on_image_history_received);
 
         WhaleWatcher.Application.docker_service.start_streaming ();
         //  WhaleWatcher.Application.docker_service.request_version ();
@@ -94,7 +102,10 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
     }
 
     private void on_layers_size_received (uint64 layers_size) {
-        main_layout.show_layers_size (layers_size);
+        Idle.add (() => {
+            main_layout.show_layers_size (layers_size);
+            return false;
+        });
     }
 
     private void on_version_received (WhaleWatcher.Models.DockerVersion version) {
@@ -105,7 +116,69 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         //  foreach (var image in images) {
         //      print (image.to_string ());
         //  }
-        main_layout.show_images (images);
+        Idle.add (() => {
+            main_layout.show_images (images);
+            return false;
+        });
+    }
+
+    private void on_image_details_received (WhaleWatcher.Models.DockerImageDetails image_details) {
+        Idle.add (() => {
+            main_layout.show_image_details (image_details);
+            return false;
+        });
+    }
+
+    private void on_image_history_received (Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history) {
+        Idle.add (() => {
+            main_layout.show_image_history (image_history);
+            return false;
+        });
+    }
+
+    private void on_cleanup_images_button_clicked (Gee.List<string> images) {
+        int result = -1;
+        bool should_force_remove = false;
+        Idle.add (() => {
+            var dialog = new WhaleWatcher.Widgets.RemoveImagesWarningDialog (this);
+            dialog.force_button_toggled.connect ((active) => {
+                should_force_remove = active;
+            });
+            dialog.destroy.connect (() => {
+                if (result != Gtk.ResponseType.CANCEL) {
+                    WhaleWatcher.Application.docker_service.remove_images (images, should_force_remove);
+                }
+            });
+            result = dialog.run ();
+            dialog.dismiss ();
+            return false;
+        });
+    }
+
+    private void on_pull_images_button_clicked (Gee.List<string> images) {
+        WhaleWatcher.Application.docker_service.pull_images (images);
+    }
+
+    private void on_inspect_image_button_clicked (string image) {
+        WhaleWatcher.Application.docker_service.inspect_image (image);
+        WhaleWatcher.Application.docker_service.request_image_history (image);
+    }
+
+    private void on_error_received (string error, string description, string? error_details) {
+        Idle.add (() => {
+            if (error_dialog == null) {
+                error_dialog = new WhaleWatcher.Widgets.ErrorDialog (this, error, description);
+                if (error_details != null) {
+                    error_dialog.show_error_details (error_details);
+                }
+                error_dialog.show_all ();
+                error_dialog.destroy.connect (() => {
+                    error_dialog = null;
+                });
+            }
+            error_dialog.present ();
+            return false;
+        });
     }
 
 }

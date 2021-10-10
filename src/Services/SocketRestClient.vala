@@ -23,7 +23,8 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
 
     private enum HttpMethod { 
         GET,
-        POST;
+        POST,
+        DELETE;
 
         public string to_string () {
             switch (this) {
@@ -31,19 +32,20 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
                     return "GET";
                 case POST:
                     return "POST";
+                case DELETE:
+                    return "DELETE";
                 default:
                     assert_not_reached ();
             }
         }
     }
 
-    private const string REQUEST_MESSAGE_FORMAT = "%s %s HTTP/1.1\r\nHost:\r\n\r\n";
+    private const string REQUEST_MESSAGE_FORMAT = "%s %s%s HTTP/1.1\r\nHost:\r\n\r\n";
 
     public string socket_file { get; construct; }
 
-    protected string? get_sync (string endpoint) {
-        debug ("Executing %s request to %s", HttpMethod.GET.to_string (), endpoint);
-        return send_request (HttpMethod.GET, endpoint);
+    protected bool get_sync (string endpoint, out string json_data, Gee.Map<string, string> query_params=new Gee.HashMap<string, string> ()) {
+        return send_request (HttpMethod.GET, endpoint, out json_data, query_params);
     }
 
     protected void get_stream (string endpoint, Cancellable cancellable) {
@@ -53,7 +55,7 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         DataOutputStream output_stream = new DataOutputStream (connection.output_stream);
 
         // Send the request for the stream
-        send_output (output_stream, REQUEST_MESSAGE_FORMAT.printf (HttpMethod.GET.to_string (), endpoint));
+        send_output (output_stream, format_request_message (HttpMethod.GET, endpoint, new Gee.HashMap<string, string> ()));
         uint status_code = read_status_code (input_stream, cancellable);
         Soup.MessageHeaders headers = read_headers (input_stream, cancellable);
         
@@ -63,28 +65,30 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         }
     }
 
-    protected void post_sync () {
-        // TODO
+    protected bool post_sync (string endpoint, out string json_data, Gee.Map<string, string> query_params=new Gee.HashMap<string, string> ()) {
+        return send_request (HttpMethod.POST, endpoint, out json_data, query_params);
     }
 
-    private string? send_request (HttpMethod method, string endpoint) {
+    protected bool delete_sync (string endpoint, out string json_data, Gee.Map<string, string> query_params=new Gee.HashMap<string, string> ()) {
+        return send_request (HttpMethod.DELETE, endpoint, out json_data, query_params);
+    }
+
+    private bool send_request (HttpMethod method, string endpoint, out string body, Gee.Map<string, string> query_params) {
+        debug ("Executing %s request to %s", method.to_string (), endpoint);
+
         IOStream connection = connect_to_socket ();
         DataInputStream input_stream = new DataInputStream (connection.input_stream);
         DataOutputStream output_stream = new DataOutputStream (connection.output_stream);
 
-        send_output (output_stream, REQUEST_MESSAGE_FORMAT.printf (method.to_string (), endpoint));
+        send_output (output_stream, format_request_message (method, endpoint, query_params));
 
         Cancellable cancellable = new Cancellable ();
         uint status_code = read_status_code (input_stream, cancellable);
         Soup.MessageHeaders headers = read_headers (input_stream, cancellable);
-        string? body = read_body (headers, input_stream, cancellable);
+        body = read_body (headers, input_stream, cancellable);
 
         // TODO: Remove this
         //  debug (body);
-
-        if (is_error (status_code)) {
-            warning (body);
-        }
         
         try {
             connection.close ();
@@ -93,7 +97,13 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         } finally {
             cancellable.cancel ();
         }
-        return body;   
+
+        if (is_error (status_code)) {
+            warning (body);
+            return false;
+        }
+
+        return true;   
     }
 
     private uint? read_status_code (DataInputStream input_stream, Cancellable? cancellable) {
@@ -253,6 +263,18 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         bool is_4xx = status_code.to_string ()[0] == '4';
         bool is_5xx = status_code.to_string ()[0] == '5';
         return is_4xx || is_5xx;
+    }
+
+    private string format_request_message (HttpMethod method, string endpoint, Gee.Map<string, string> query_params) {
+        var sb = new GLib.StringBuilder ();
+        if (query_params.size > 0) {
+            foreach (var entry in query_params.entries) {
+                // TODO: Check URL encoding
+                sb.append ("&%s=%s".printf (entry.key, entry.value));
+            }
+            sb.overwrite (0, "?");
+        }
+        return REQUEST_MESSAGE_FORMAT.printf (method.to_string (), endpoint, sb.str);
     }
 
     protected abstract void read_stream (DataInputStream input_stream, Cancellable? cancellable);

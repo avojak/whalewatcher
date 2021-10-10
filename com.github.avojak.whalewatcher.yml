@@ -15,6 +15,12 @@ finish-args:
   - '--filesystem=/run/docker.sock:ro'
 
 modules:
+  - name: gtksourceview
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/gtksourceview.git
+        tag: '4.8.0'
   - name: whalewatcher
     buildsystem: meson
     sources:
