@@ -53,6 +53,14 @@ public class WhaleWatcher.Views.Images.InspectImageView : Gtk.Grid {
         attach (paned, 0, 0, 1, 1);
     }
 
+    private Gtk.Grid create_details_grid () {
+        var grid = new Gtk.Grid ();
+        var id_label = new Gtk.Label (_("Image ID"));
+        var created_label = new Gtk.Label (_("Created"));
+        var size_label = new Gtk.Label (_("Size"));
+        return grid;
+    }
+
     private Gtk.Widget create_history_pane () {
         var grid = new Gtk.Grid ();
         grid.margin_right = 4;

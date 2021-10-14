@@ -27,6 +27,7 @@ whalewatcher_files = files(
     join_paths('Services', 'SocketRestClient.vala'),
     join_paths('Util', 'JsonUtils.vala'),
     join_paths('Widgets', 'HeaderBar.vala'),
+    join_paths('Widgets', 'CellRendererBadge.vala'),
     join_paths('Widgets', 'Dialogs', 'ErrorDialog.vala'),
     join_paths('Widgets', 'Dialogs', 'RemoveImagesWarningDialog.vala'),
     join_paths('Widgets', 'Sidebar', 'ImagesEntry.vala'),
