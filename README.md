@@ -40,7 +40,7 @@ You can also install a development build alongside a stable version by specifyin
 ```
 $ meson build --prefix=/usr -Dprofile=dev
 $ sudo ninja -C build install
-$ com.github.avojak.whalewatcher-dev
+$ G_MESSAGES_DEBUG=all com.github.avojak.whalewatcher-dev
 ```
 
 ### Updating Translations

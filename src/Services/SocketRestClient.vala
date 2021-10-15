@@ -139,7 +139,7 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
             return read_chunked (input_stream, cancellable);
         } else if (headers.get_one ("Content-Length") != null) {
             long content_length = long.parse (headers.get_one ("Content-Length"));
-            return read_content (input_stream, content_length, cancellable);
+            return read_content (input_stream, content_length - 1, cancellable); // XXX: Why do we need -1 here? Newline char?
         } else {
             // TODO: Handle this! Read until end of stream
             assert_not_reached ();
@@ -149,8 +149,9 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
     protected string? read_content (DataInputStream input_stream, long content_length, Cancellable? cancellable) {
         try {
             uint8[] buffer = new uint8[content_length];
-            input_stream.read (buffer, cancellable);
-            string line = (string) buffer;
+            size_t bytes_read = input_stream.read (buffer, cancellable);
+            debug ("Read %s bytes", bytes_read.to_string ());
+            string line = ((string) buffer).strip ();
             if (WhaleWatcher.Application.is_dev_mode ()) {
                 debug (@"$line");
             }
@@ -169,6 +170,8 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
                 sb.append (chunk);
             }
         }
+        // Read the trailer
+        input_stream.read_line_utf8 (null, cancellable);
         return sb.str;
     }
 
@@ -176,12 +179,18 @@ public abstract class WhaleWatcher.Services.SocketRestClient : GLib.Object {
         try {
             // 1. Content length followed by a carriage return. Read this as a hexidecimal string.
             long content_length = long.parse (input_stream.read_line_utf8 (null, cancellable).replace ("\r", ""), 16);
+            debug ("Chunk length: %s", content_length.to_string ());
             // Last chunk when reading chunked data is simply length 0, so return null to signify end
             if (content_length == 0) {
                 return null;
             }
             // 2. The content
-            return read_content (input_stream, content_length, cancellable).strip ();
+            return read_content (input_stream, content_length - 1, cancellable).strip ();
+            // Last chunk when reading chunked data is simply "0", so return null to signify end
+            //  if (content == "0") {
+            //      return null;
+            //  }
+            //  return content;
         } catch (GLib.IOError e) {
             critical ("IOError while reading chunk content: %s", e.message);
             return null;

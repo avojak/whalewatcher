@@ -24,7 +24,7 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
     // I'm not 100% sure why this needs to be static - but they did it over
     // here: https://github.com/xfce-mirror/xfmpc/blob/921fa89585d61b7462e30bac5caa9b2f583dd491/src/playlist.vala
     // And it doesn't work otherwise...
-    private static Gtk.Entry search_entry;
+    private static Gtk.SearchEntry search_entry;
     private static Gtk.CheckButton in_use_button;
 
     private Gtk.TreeView tree_view;
@@ -63,18 +63,12 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
     }
 
     construct {
-        search_entry = new Gtk.Entry () {
-            placeholder_text = _("Search"),
+        search_entry = new Gtk.SearchEntry () {
+            placeholder_text = _("Search Image Names, Tags, or IDs"),
             sensitive = false,
-            hexpand = true,
-            secondary_icon_tooltip_text = _("Clear")
+            hexpand = true
         };
         search_entry.changed.connect (() => {
-            if (search_entry.text != "") {
-                search_entry.secondary_icon_name = "edit-clear-symbolic";
-            } else {
-                search_entry.secondary_icon_name = null;
-            }
             filter.refilter ();
         });
         search_entry.icon_release.connect ((icon_pos, event) => {
@@ -343,7 +337,7 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
         tree_view.set_model (filter);
         //  spinner.stop ();
         //  status_label.label = "%s channels found".printf (channels.size.to_string ());
-        search_entry.sensitive = true;
+        search_entry.sensitive = images.size > 0;
     }
 
     public signal void cleanup_images_button_clicked (Gee.List<string> images);

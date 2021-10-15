@@ -139,6 +139,7 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
             }
             long content_length = long.parse (line.replace ("\r", ""), 16);
             // 2. The content
+            // TODO: Should this be read_body or read_chunk since that handles chunked content?
             var content = read_content (input_stream, content_length, cancellable).strip ();
             // 3. A single carriage return
             var carriage_return = input_stream.read_line_utf8 (null, cancellable);

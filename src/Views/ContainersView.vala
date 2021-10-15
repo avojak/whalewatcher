@@ -23,8 +23,7 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
 
     public const string TITLE = _("Containers");
 
-    private static Gtk.Entry search_entry;
-    private static Gtk.CheckButton in_use_button;
+    private static Gtk.SearchEntry search_entry;
 
     private Gtk.Stack stack;
     private Gtk.Grid browse_containers_view;
@@ -94,29 +93,18 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
             column_spacing = 10
         };
 
-        search_entry = new Gtk.Entry () {
-            placeholder_text = _("Search"),
+        search_entry = new Gtk.SearchEntry () {
+            placeholder_text = _("Search Container Names or Associated Images"),
             sensitive = false,
-            hexpand = true,
-            secondary_icon_tooltip_text = _("Clear")
+            hexpand = true
         };
         search_entry.changed.connect (() => {
-            if (search_entry.text != "") {
-                search_entry.secondary_icon_name = "edit-clear-symbolic";
-            } else {
-                search_entry.secondary_icon_name = null;
-            }
             filter.refilter ();
         });
         search_entry.icon_release.connect ((icon_pos, event) => {
             if (icon_pos == Gtk.EntryIconPosition.SECONDARY) {
                 search_entry.set_text ("");
             }
-        });
-
-        in_use_button = new Gtk.CheckButton.with_label (_("In-use only"));
-        in_use_button.toggled.connect (() => {
-            filter.refilter ();
         });
 
         var container_browsing_grid = new Gtk.Grid ();
@@ -221,8 +209,7 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         container_browsing_grid.attach (status_bar, 0, 2, 2, 1);
 
         grid.attach (search_entry, 0, 0, 1, 1);
-        grid.attach (in_use_button, 1, 0, 1, 1);
-        grid.attach (container_browsing_grid, 0, 1, 2, 1);
+        grid.attach (container_browsing_grid, 0, 1, 1, 1);
 
         return grid;
     }
@@ -243,13 +230,13 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
             return true;
         }
         string name = "";
-        string tag = "";
+        string image = "";
         model.get (iter, Column.NAME, out name, -1);
-        model.get (iter, Column.IMAGE, out tag, -1);
-        if (name == null || tag == null) {
+        model.get (iter, Column.IMAGE, out image, -1);
+        if (name == null || image == null) {
             return true;
         }
-        if (name.down ().contains (search_string) || tag.down ().contains (search_string)) {
+        if (name.down ().contains (search_string) || image.down ().contains (search_string)) {
             return true;
         }
         return false;
@@ -319,7 +306,7 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         tree_view.set_model (filter);
         //  spinner.stop ();
         //  status_label.label = "%s channels found".printf (channels.size.to_string ());
-        search_entry.sensitive = true;
+        search_entry.sensitive = containers.size > 0;
     }
 
     public void show_browse_containers_view () {
