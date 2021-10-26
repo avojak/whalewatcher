@@ -143,7 +143,7 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
                 tree_view.get_column (i).min_width = 20;
             } else {
                 tree_view.get_column (i).resizable = true;
-                tree_view.get_column (i).min_width = 150;
+                tree_view.get_column (i).min_width = 250;
             }
         }
 
@@ -186,6 +186,8 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
             sensitive = false
         };
         cli_button.clicked.connect (() => {
+            //  Posix.system ("io.elementary.terminal --execute=\"docker ps\"");
+            //  AppInfo.create_from_commandline ("docker ps", "", GLib.AppInfoCreateFlags.NEEDS_TERMINAL);
             // TODO
         });
 
@@ -278,29 +280,25 @@ public class WhaleWatcher.Views.ContainersView : Gtk.Grid {
         return containers;
     }
 
-    public void set_containers (Gee.List<WhaleWatcher.Models.DockerImageSummary> containers) {
+    public void set_containers (Gee.List<WhaleWatcher.Models.DockerContainer> containers) {
         // For performance reasons, unset the data model before populating it, then re-add to the tree view once fully populated
         tree_view.set_model (placeholder_list_store);
         search_entry.sensitive = false;
         list_store.clear ();
         foreach (var entry in containers) {
-            var display_name = entry.get_name ();
-            var display_id = entry.get_short_id ();
+            var name = entry.names.get (0);
+            var display_name = name.has_prefix ("/") ? name.substring (1) : name;
+            var display_status = entry.status;
+            var display_image = entry.image;
             // TODO: Make this a little cleaner (official app shows things like "6 days ago")
-            var display_created = new DateTime.from_unix_utc (entry.created).to_local ().format ("%x %X");
-            var display_size = GLib.format_size (entry.size, GLib.FormatSizeFlags.DEFAULT);
-            foreach (var tag in entry.repo_tags) {
-                var display_tag = tag.split(":")[1];
-                Gtk.TreeIter iter;
-                //  list_store.append (out iter);
-                //  list_store.set (iter, Column.STATUS_ICON, entry.containers > 0 ? "emblem-enabled" : null,
-                //                               Column.NAME, display_name,
-                //                                Column.IMAGE, display_tag,
-                //                                 Column.ID, display_id,
-                //                            Column.CREATED, display_created,
-                //                               Column.SIZE, display_size,
-                //                             Column.IN_USE, entry.containers > 0);
-            }
+            //  var display_created = new DateTime.from_unix_utc (entry.created).to_local ().format ("%x %X");
+            
+            Gtk.TreeIter iter;
+            list_store.append (out iter);
+            list_store.set (iter, Column.STATUS_ICON, null,
+                                 Column.STATUS_LABEL, display_status,
+                                         Column.NAME, display_name,
+                                        Column.IMAGE, display_image);
         }
         // With the model fully populated, we can now update the view
         tree_view.set_model (filter);

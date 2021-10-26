@@ -30,6 +30,14 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
         );
     }
 
+    public bool validate_socket_file () {
+        return GLib.File.new_for_path (SOCKET_FILE).query_exists ();
+    }
+
+    public string? test_socket_connection () {
+        return test_socket ();
+    }
+
     public WhaleWatcher.Models.DockerServerState ping () {
         string? json_data;
         get_sync (@"/$API_VERSION/_ping", out json_data);
@@ -84,6 +92,7 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
         }
     }
 
+    // TODO: This should be handled as a stream
     public void pull_image (string image_name) {
         // TODO: Add optional auth here
         var query_params = new Gee.HashMap<string, string> ();
@@ -95,6 +104,8 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
             }) as WhaleWatcher.Models.DockerEngineErrorResponse;
             error_received ("Error while pulling image", "There was an error while attempting to pull the image %s.".printf (image_name), error_response.message);
         }
+        // TODO: This comes back as a fake "list" of JSON elements, when handled as a stream this won't be an issue anymore
+        debug (@"$json_data");
     }
 
     public WhaleWatcher.Models.DockerImageDetails? inspect_image (string image_name) {
@@ -111,6 +122,16 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
         return WhaleWatcher.Util.JsonUtils.parse_json_array (json_data, (json_obj) => {
             return WhaleWatcher.Models.DockerImageLayer.from_json (json_obj);
         }) as Gee.List<WhaleWatcher.Models.DockerImageLayer>;
+    }
+
+    public bool import_image (GLib.File file) {
+        string? json_data;
+        return send_file (@"/$API_VERSION/images/load", file, out json_data);
+    }
+
+    public bool export_image (string image_name, GLib.File file) {
+        string? json_data;
+        return receive_file (@"/$API_VERSION/images/$image_name/get", file, out json_data);
     }
 
     public void get_containers () {

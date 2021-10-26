@@ -53,6 +53,29 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         docker_client.event_received.connect (on_event_received);
     }
 
+    public void validate_connection () {
+        new Thread<void> (null, () => {
+            debug ("Validating socket file...");
+            if (!docker_client.validate_socket_file ()) {
+                invalid_connection (_("Docker socket file not found"), _("The Docker socket file was not found at %s. Verify that Docker is correctly installed.\n\nFor instructions on installing Docker, see: <a href=\"https://docs.docker.com/engine/install/ubuntu/\">Installing Docker Engine</a>.".printf ("/var/run/docker.sock")));
+                return;
+            }
+            debug ("Testing socket connection...");
+            string? socket_test_error = docker_client.test_socket_connection ();
+            if (socket_test_error != null) {
+                invalid_connection (_("Unable to establish socket connection"), _("There was an error while attempting to connect to the socket: %s".printf (socket_test_error)));
+                return;
+            }
+            debug ("Pinging server...");
+            if (WhaleWatcher.Models.DockerServerState.State.ERROR == docker_client.ping ().state) {
+                invalid_connection (_("Docker server is in an errored state"), _("The Docker server responded with an error state. Verify that Docker is running without errors."));
+                return;
+            }
+            debug ("Connection OK");
+            valid_connection ();
+        });
+    }
+
     public void start_streaming () {
         if (streaming_thread != null) {
             warning ("Already streaming");
@@ -72,8 +95,8 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         streaming_cancellable.cancel ();
     }
 
-    public void ping () {
-        docker_client.ping ();
+    public WhaleWatcher.Models.DockerServerState ping () {
+        return docker_client.ping ();
     }
 
     public void request_version () {
@@ -92,7 +115,7 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
             if (system_data_usage != null) {
                 layers_size_received (system_data_usage.layers_size);
                 images_received (system_data_usage.images);
-                //  containers_received (system_data_usage.containers);
+                containers_received (system_data_usage.containers);
                 //  volumes_received (system_data_usage.volumes);
             }
         });
@@ -132,7 +155,7 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
             // An image name is either a name:tag pair or an ID
             var image_details = docker_client.inspect_image (image_name);
             if (image_details != null) {
-                image_details_received (image_details);
+                image_details_received (image_name, image_details);
             }
         });
     }
@@ -142,7 +165,37 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
             // An image name is either a name:tag pair or an ID
             var image_history = docker_client.get_image_history (image_name);
             if (image_history != null) {
-                image_history_received (image_history);
+                image_history_received (image_name, image_history);
+            }
+        });
+    }
+
+    public void import_image (string uri) {
+        new Thread<void> (null, () => {
+            var file = GLib.File.new_for_uri (uri);
+            if (docker_client.import_image (file)) {
+                //  image_imported ()
+            } else {
+                // TODO
+            }
+        });
+    }
+
+    public void export_image (string image, string uri) {
+        new Thread<void> (null, () => {
+            var file = GLib.File.new_for_uri (uri);
+            if (file.query_exists ()) {
+                try {
+                    file.delete ();
+                } catch (GLib.Error e) {
+                    warning ("Error while deleting file: %s", e.message);
+                    return;
+                }
+            }
+            if (docker_client.export_image (image, file)) {
+                image_exported (image);
+            } else {
+                // TODO
             }
         });
     }
@@ -169,6 +222,11 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
                     return WhaleWatcher.Models.Event.ImageEvent.from_json (json_obj);
                 }) as WhaleWatcher.Models.Event.ImageEvent);
                 break;
+            case WhaleWatcher.Models.Event.ContainerEvent.TYPE:
+                on_container_event_received (WhaleWatcher.Util.JsonUtils.parse_json_obj (event, (json_obj) => {
+                    return WhaleWatcher.Models.Event.ContainerEvent.from_json (json_obj);
+                }) as WhaleWatcher.Models.Event.ContainerEvent);
+                break;
             default:
                 warning ("Unsupported event type");
                 break;
@@ -194,11 +252,53 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
         }
     }
 
+    private void on_container_event_received (WhaleWatcher.Models.Event.ContainerEvent event) {
+        request_system_data_usage ();
+        switch (event.action) {
+            case ATTACH:
+            case COMMIT:
+            case COPY:
+            case CREATE:
+            case DESTROY:
+            case DETACH:
+            case DIE:
+            case EXEC_CREATE:
+            case EXEC_DETACH:
+            case EXEC_START:
+            case EXEC_DIE:
+            case EXPORT:
+            case HEALTH_STATUS:
+            case KILL:
+            case OOM:
+            case PAUSE:
+            case RENAME:
+            case RESIZE:
+            case RESTART:
+            case START:
+            case STOP:
+            case TOP:
+            case UNPAUSE:
+            case UPDATE:
+            case PRUNE:
+                break;
+            default:
+                assert_not_reached ();
+        }
+    }
+
+    public signal void invalid_connection (string title, string details);
+    public signal void valid_connection ();
+
+    // Signals for responding to data received from the Docker engine
     public signal void error_received (string error, string description, string? details);
     public signal void layers_size_received (uint64 layers_size);
     public signal void version_received (WhaleWatcher.Models.DockerVersion version);
     public signal void images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images);
-    public signal void image_details_received (WhaleWatcher.Models.DockerImageDetails image_details);
-    public signal void image_history_received (Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history);
+    public signal void containers_received (Gee.List<WhaleWatcher.Models.DockerContainer> containers);
+    public signal void image_details_received (string image_name, WhaleWatcher.Models.DockerImageDetails image_details);
+    public signal void image_history_received (string image_name, Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history);
+
+    // Signals for responding to actions performed
+    public signal void image_exported (string image_name);
 
 }

@@ -35,11 +35,13 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
     private Gtk.Label disk_usage_value_label;
 
     private Gtk.Button inspect_button;
-    private Gtk.Button run_button;
-    private Gtk.Button export_button;
-    private Gtk.Button pull_button;
+    private Gtk.MenuItem run_button;
+    private Gtk.MenuItem export_button;
+    private Gtk.MenuItem pull_button;
     //  private Gtk.Button push_button;
     private Gtk.Button cleanup_button;
+
+    private Gtk.MenuButton menu_button;
 
     enum Column {
         IN_USE_ICON,
@@ -139,7 +141,7 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
         //  tree_view.cursor_changed.connect (() => {
         //      evaluate_tree_view_selection ();
         //  });
-        tree_view.get_selection ().changed.connect (evaluate_tree_view_selection);
+        tree_view.get_selection ().changed.connect (on_tree_view_selection_changed);
         tree_view.get_selection ().set_mode (Gtk.SelectionMode.MULTIPLE);
 
         var status_bar = new Gtk.Statusbar () {
@@ -152,55 +154,65 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
         };
 
         // Using the symbolic icons here because the non-symbolic search icon at this size has very poor contrast in dark mode
-        inspect_button = new Gtk.Button.from_icon_name ("system-search-symbolic", Gtk.IconSize.BUTTON) {
+        inspect_button = new Gtk.Button.from_icon_name ("system-search-symbolic", Gtk.IconSize.SMALL_TOOLBAR) {
             tooltip_text = _("Inspect…"),
             sensitive = false
         };
         inspect_button.clicked.connect (on_inspect_button_clicked);
 
-        run_button = new Gtk.Button.from_icon_name ("media-playback-start-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("Run…"),
+        run_button = new Gtk.MenuItem.with_label ("Run…") {
             sensitive = false
         };
-        run_button.clicked.connect (() => {
-            // TODO
-        });
+        //  run_button.clicked.connect (() => {
+        //      // TODO
+        //  });
 
-        export_button = new Gtk.Button.from_icon_name ("document-export-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("Export…"),
+        export_button = new Gtk.MenuItem.with_label ("Export…") {
+            //  tooltip_text = _("Export…"),
             sensitive = false
         };
-        export_button.clicked.connect (() => {
-            // TODO
-        });
+        export_button.activate.connect (on_export_button_clicked);
 
-        pull_button = new Gtk.Button.from_icon_name ("browser-download-symbolic", Gtk.IconSize.BUTTON) {
-            tooltip_text = _("Pull"),
+        pull_button = new Gtk.MenuItem.with_label ("Pull") {
+            //  tooltip_text = _("Pull"),
             sensitive = false
         };
-        pull_button.clicked.connect (on_pull_button_clicked);
+        //  pull_button.clicked.connect (on_pull_button_clicked);
 
-        //  push_button = new Gtk.Button.from_icon_name ("document-send", Gtk.IconSize.BUTTON) {
+        //  push_button = new Gtk.Button.from_icon_name ("document-send", Gtk.IconSize.SMALL_TOOLBAR) {
         //      tooltip_text = _("Clean up…")
         //  };
         //  push_button.clicked.connect (() => {
         //      // TODO
         //  });
 
-        cleanup_button = new Gtk.Button.from_icon_name ("edit-delete-symbolic", Gtk.IconSize.BUTTON) {
+        cleanup_button = new Gtk.Button.from_icon_name ("edit-delete-symbolic", Gtk.IconSize.SMALL_TOOLBAR) {
             tooltip_text = _("Remove…"),
             sensitive = false
         };
         cleanup_button.clicked.connect (on_cleanup_button_clicked);
 
+        menu_button = new Gtk.MenuButton ();
+        menu_button.image = new Gtk.Image.from_icon_name ("view-more-horizontal-symbolic", Gtk.IconSize.SMALL_TOOLBAR);
+        menu_button.tooltip_text = _("More options…");
+
+        var menu = new Gtk.Menu ();
+        menu.add (run_button);
+        menu.add (export_button);
+        menu.add (pull_button);
+        menu.show_all ();
+
+        menu_button.popup = menu;
+
         //  status_bar.attach (disk_usage_value_label, 0, 0, 1, 1);
         //  status_bar.attach (cleanup_button, 1, 0, 1, 1);
 
         status_bar.get_message_area ().pack_start (disk_usage_value_label, true, true, 4);
+        status_bar.get_message_area ().pack_end (menu_button, false, false, 4);
         status_bar.get_message_area ().pack_end (inspect_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (run_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (export_button, false, false, 4);
-        status_bar.get_message_area ().pack_end (pull_button, false, false, 4);
+        //  status_bar.get_message_area ().pack_end (run_button, false, false, 4);
+        //  status_bar.get_message_area ().pack_end (export_button, false, false, 4);
+        //  status_bar.get_message_area ().pack_end (pull_button, false, false, 4);
         status_bar.get_message_area ().pack_end (cleanup_button, false, false, 4);
 
         scrolled_window.add (tree_view);
@@ -244,6 +256,11 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
         return false;
     }
 
+    private void on_tree_view_selection_changed () {
+        evaluate_tree_view_selection ();
+        image_selection_changed (get_selected_images ());
+    }
+
     private void evaluate_tree_view_selection () {
         // Get the selection
         Gtk.TreeSelection selection = tree_view.get_selection ();
@@ -282,6 +299,10 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
         inspect_image_button_clicked (get_selected_images ().get (0));
     }
 
+    private void on_export_button_clicked () {
+        export_button_clicked ();
+    }
+
     // Gets the selected images as either name:tag, or ID in the case of <none>:<none>
     private Gee.List<string> get_selected_images () {
         var images = new Gee.ArrayList<string> ();
@@ -296,7 +317,7 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
             string tag = tag_value.get_string ();
             string id = id_value.get_string ();
             if (name == "<none>" && tag == "<none>") {
-                images.add (@"$id");
+                images.add (id);
             } else {
                 images.add (@"$name:$tag");
             }
@@ -340,8 +361,10 @@ public class WhaleWatcher.Views.Images.BrowseImagesView : Gtk.Grid {
         search_entry.sensitive = images.size > 0;
     }
 
+    public signal void image_selection_changed (Gee.List<string> images);
     public signal void cleanup_images_button_clicked (Gee.List<string> images);
     public signal void pull_images_button_clicked (Gee.List<string> images);
     public signal void inspect_image_button_clicked (string image);
+    public signal void export_button_clicked ();
 
 }

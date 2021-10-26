@@ -67,3 +67,15 @@ To test executing REST requests against the Docker engine manually, you can use 
 ```bash
 $ curl --unix-socket /var/run/docker.sock -X GET "http:/v1.41/images/json"
 ```
+
+To view all events:
+
+```bash
+$ curl --unix-socket /var/run/docker.sock -X GET "http:/v1.41/events"
+```
+
+To import an image:
+
+```bash
+$ curl --unix-socket /var/run/docker.sock -X POST -H "Content-Type: application/x-tar" --data-binary "@/path/to/file.tar" "http:/v1.41/images/load"
+```

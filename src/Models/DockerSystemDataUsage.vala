@@ -23,7 +23,7 @@ public class WhaleWatcher.Models.DockerSystemDataUsage : GLib.Object {
 
     public uint64 layers_size { get; set; }
     public Gee.List<WhaleWatcher.Models.DockerImageSummary> images { get; set; }
-    //  public Gee.List<WhaleWatcher.Models.DockerContainer> containers { get; set; }
+    public Gee.List<WhaleWatcher.Models.DockerContainer> containers { get; set; }
     //  public Gee.List<WhaleWatcher.Models.DockerVolume> volumes { get; set; }
 
     public static WhaleWatcher.Models.DockerSystemDataUsage from_json (Json.Object json) {
@@ -48,7 +48,18 @@ public class WhaleWatcher.Models.DockerSystemDataUsage : GLib.Object {
                     }
                     break;
                 case "Containers":
-                    //  obj.version = json.get_string_member (name);
+                    obj.containers = new Gee.ArrayList<WhaleWatcher.Models.DockerContainer> ();
+                    var member = json.get_member (name);
+                    if (member == null || member.is_null ()) {
+                        break;
+                    }
+                    var array = member.get_array ();
+                    if (array == null) {
+                        break;
+                    }
+                    foreach (var element in array.get_elements ()) {
+                        obj.containers.add (WhaleWatcher.Models.DockerContainer.from_json (element.get_object ()));
+                    }
                     break;
                 case "Volumes":
                     //  obj.api_version = json.get_string_member (name);

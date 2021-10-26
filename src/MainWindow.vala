@@ -27,6 +27,9 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
 
     private WhaleWatcher.Layouts.MainLayout main_layout;
 
+    private Gtk.FileFilter all_files_filter;
+    private Gtk.FileFilter archive_files_filter;
+
     public MainWindow (WhaleWatcher.Application application) {
         Object (
             application: application,
@@ -39,13 +42,29 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
 
     construct {
         main_layout = new WhaleWatcher.Layouts.MainLayout (this);
-        main_layout.cleanup_images_button_clicked.connect (on_cleanup_images_button_clicked);
-        main_layout.pull_images_button_clicked.connect (on_pull_images_button_clicked);
-        main_layout.inspect_image_button_clicked.connect (on_inspect_image_button_clicked);
+        main_layout.delete_image_button_clicked.connect (on_delete_image_button_clicked);
+        main_layout.pull_image_button_clicked.connect (on_pull_image_button_clicked);
+        main_layout.import_image_button_clicked.connect (on_import_image_button_clicked);
+        main_layout.export_image_button_clicked.connect (on_image_export_button_clicked);
+        main_layout.retry_connection.connect (run_startup_checks);
+        main_layout.image_selected.connect (on_image_selected);
         add (main_layout);
 
         move (WhaleWatcher.Application.settings.get_int ("pos-x"), WhaleWatcher.Application.settings.get_int ("pos-y"));
         resize (WhaleWatcher.Application.settings.get_int ("window-width"), WhaleWatcher.Application.settings.get_int ("window-height"));
+
+        all_files_filter = new Gtk.FileFilter ();
+        all_files_filter.set_filter_name (_("All files"));
+        all_files_filter.add_pattern ("*");
+
+        archive_files_filter = new Gtk.FileFilter ();
+        archive_files_filter.set_filter_name (_("Archive files"));
+        archive_files_filter.add_pattern ("*.tar");
+        archive_files_filter.add_pattern ("*.tar.gz");
+        archive_files_filter.add_pattern ("*.tgz");
+        archive_files_filter.add_pattern ("*.bzip");
+        archive_files_filter.add_pattern ("*.tar.xz");
+        archive_files_filter.add_pattern ("*.txz");
 
         // Close streaming connection when the window is closed
         this.destroy.connect (() => {
@@ -66,15 +85,24 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         WhaleWatcher.Application.docker_service.layers_size_received.connect (on_layers_size_received);
         WhaleWatcher.Application.docker_service.version_received.connect (on_version_received);
         WhaleWatcher.Application.docker_service.images_received.connect (on_images_received);
+        WhaleWatcher.Application.docker_service.containers_received.connect (on_containers_received);
         WhaleWatcher.Application.docker_service.image_details_received.connect (on_image_details_received);
         WhaleWatcher.Application.docker_service.image_history_received.connect (on_image_history_received);
 
-        WhaleWatcher.Application.docker_service.start_streaming ();
-        //  WhaleWatcher.Application.docker_service.request_version ();
-        WhaleWatcher.Application.docker_service.request_system_data_usage ();
-        
+        WhaleWatcher.Application.docker_service.image_exported.connect (on_image_exported);
+
+        WhaleWatcher.Application.docker_service.invalid_connection.connect ((title, message) => {
+            main_layout.show_error_view (title, message);
+        });
+        WhaleWatcher.Application.docker_service.valid_connection.connect (() => {
+            WhaleWatcher.Application.docker_service.start_streaming ();
+            WhaleWatcher.Application.docker_service.request_system_data_usage ();
+            main_layout.show_last_view ();
+        });
 
         show_app ();
+
+        run_startup_checks ();
     }
 
     public void show_app () {
@@ -87,6 +115,11 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         update_position_settings ();
         destroy ();
         return true;
+    }
+
+    private void run_startup_checks () {
+        debug ("Running startup checks...");
+        WhaleWatcher.Application.docker_service.validate_connection ();
     }
 
     private void update_position_settings () {
@@ -113,30 +146,44 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
     }
 
     private void on_images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {
-        //  foreach (var image in images) {
-        //      print (image.to_string ());
-        //  }
         Idle.add (() => {
             main_layout.show_images (images);
             return false;
         });
     }
 
-    private void on_image_details_received (WhaleWatcher.Models.DockerImageDetails image_details) {
+    private void on_containers_received (Gee.List<WhaleWatcher.Models.DockerContainer> containers) {
         Idle.add (() => {
-            main_layout.show_image_details (image_details);
+            main_layout.show_containers (containers);
             return false;
         });
     }
 
-    private void on_image_history_received (Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history) {
+    private void on_image_details_received (string image_name, WhaleWatcher.Models.DockerImageDetails image_details) {
         Idle.add (() => {
-            main_layout.show_image_history (image_history);
+            main_layout.show_image_details (image_name, image_details);
             return false;
         });
     }
 
-    private void on_cleanup_images_button_clicked (Gee.List<string> images) {
+    private void on_image_history_received (string image_name, Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history) {
+        Idle.add (() => {
+            main_layout.show_image_history (image_name, image_history);
+            return false;
+        });
+    }
+
+    private void on_image_exported (string image_name) {
+        Idle.add (() => {
+            main_layout.show_toast_alert (_("Exported %s".printf (image_name)));
+            return false;
+        });
+    }
+
+    private void on_delete_image_button_clicked (string image_name) {
+        var images = new Gee.ArrayList<string> ();
+        images.add (image_name);
+
         int result = -1;
         bool should_force_remove = false;
         Idle.add (() => {
@@ -155,13 +202,70 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         });
     }
 
-    private void on_pull_images_button_clicked (Gee.List<string> images) {
+    private void on_pull_image_button_clicked (string image_name) {
+        var images = new Gee.ArrayList<string> ();
+        images.add (image_name);
         WhaleWatcher.Application.docker_service.pull_images (images);
     }
 
-    private void on_inspect_image_button_clicked (string image) {
-        WhaleWatcher.Application.docker_service.inspect_image (image);
-        WhaleWatcher.Application.docker_service.request_image_history (image);
+    private void on_image_selected (string image_name) {
+        WhaleWatcher.Application.docker_service.inspect_image (image_name);
+        WhaleWatcher.Application.docker_service.request_image_history (image_name);
+    }
+
+    //  private void on_inspect_image_button_clicked (string image) {
+    //      WhaleWatcher.Application.docker_service.inspect_image (image);
+    //      WhaleWatcher.Application.docker_service.request_image_history (image);
+    //  }
+
+    private void on_import_image_button_clicked () {
+        var file_chooser = new Gtk.FileChooserNative (_("Select image file"), this, Gtk.FileChooserAction.OPEN, _("Import"), _("Cancel"));
+        file_chooser.add_filter (all_files_filter);
+        file_chooser.add_filter (archive_files_filter);
+        file_chooser.set_filter (archive_files_filter);
+        // TODO: This should be supported in the future
+        file_chooser.select_multiple = false;
+        // TODO: Remember last location
+        file_chooser.set_current_folder_uri (GLib.Environment.get_home_dir ());
+        
+        var response = file_chooser.run ();
+        file_chooser.destroy ();
+        
+        if (response == Gtk.ResponseType.ACCEPT) {
+            // TODO: Update last visited path
+            foreach (string uri in file_chooser.get_uris ()) {
+                debug (@"Importing $uri");
+                WhaleWatcher.Application.docker_service.import_image (uri);
+            }
+        }
+
+        // Result of loading seems to just be a single stream message:
+        // {"stream":"Loaded image: hello-world:latest\n"}
+        // Similarly, a single engine image event
+    }
+
+    private void on_image_export_button_clicked (string image) {
+        var file_chooser = new Gtk.FileChooserNative (_("Export Image"), this, Gtk.FileChooserAction.SAVE, _("Export"), _("Cancel"));
+        file_chooser.add_filter (all_files_filter);
+        file_chooser.add_filter (archive_files_filter);
+        file_chooser.set_filter (archive_files_filter);
+        // TODO: This should be supported in the future
+        file_chooser.select_multiple = false;
+        // TODO: Remember last location
+        file_chooser.set_current_folder_uri (GLib.Environment.get_home_dir ());
+        file_chooser.set_current_name ("%s.tar".printf (image.replace (":", "-").replace ("/", "-")));
+        file_chooser.do_overwrite_confirmation = true;
+        
+        var response = file_chooser.run ();
+        file_chooser.destroy ();
+        
+        if (response == Gtk.ResponseType.ACCEPT) {
+            // TODO: Update last visited path
+            foreach (string uri in file_chooser.get_uris ()) {
+                debug (@"Exporting $uri");
+                WhaleWatcher.Application.docker_service.export_image (image, uri);
+            }
+        }
     }
 
     private void on_error_received (string error, string description, string? error_details) {
