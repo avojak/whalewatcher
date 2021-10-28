@@ -59,6 +59,7 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
         });
         //  header_bar.image_export_button_clicked.connect (on_image_export_button_clicked);
         header_bar.image_search_entry_changed.connect (on_image_search_entry_changed);
+        header_bar.container_search_entry_changed.connect (on_container_search_entry_changed);
         //  unowned Gtk.StyleContext header_context = header_bar.get_style_context ();
         //  header_context.add_class ("default-decoration");
 
@@ -89,9 +90,14 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
         images_view.export_button_clicked.connect ((image_name) => {
             export_image_button_clicked (image_name);
         });
-
+        
         containers_view = new WhaleWatcher.Views.ContainersView ();
+
         volumes_view = new WhaleWatcher.Views.VolumesView ();
+        volumes_view.browse_button_clicked.connect ((volume_name) => {
+            browse_volume_button_clicked (volume_name);
+        });
+
         networks_view = new WhaleWatcher.Views.NetworksView ();
 
         //  view_title_mapping.set (0, WhaleWatcher.Views.ImagesView.TITLE);
@@ -149,7 +155,8 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
         //  debug ("%s selected", view_title);
         Idle.add (() => {
             stack.set_visible_child_name (view_title);
-            header_bar.set_image_browsing_buttons_visible (view_title == WhaleWatcher.Views.ImagesView.TITLE);
+            header_bar.set_image_view_buttons_visible (view_title == WhaleWatcher.Views.ImagesView.TITLE);
+            header_bar.set_container_view_buttons_visible (view_title == WhaleWatcher.Views.ContainersView.TITLE);
             return false;
         });
         WhaleWatcher.Application.settings.set_string ("last-view", view_title);
@@ -165,8 +172,8 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
             header_bar.set_return_button_label (null);
             header_bar.set_view_mode_button_visible (true);
             header_bar.set_return_button_visible (false);
-            header_bar.set_image_inspect_buttons_visible (false);
-            header_bar.set_image_browsing_buttons_visible (prior_view == WhaleWatcher.Views.ImagesView.TITLE);
+            //  header_bar.set_image_inspect_buttons_visible (false);
+            header_bar.set_image_view_buttons_visible (prior_view == WhaleWatcher.Views.ImagesView.TITLE);
             switch (prior_view) {
                 case WhaleWatcher.Views.ImagesView.TITLE:
                     //  images_view.show_browse_images_view ();
@@ -200,6 +207,10 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
 
     private void on_image_search_entry_changed (string search_text) {
         images_view.filter_images (search_text);
+    }
+
+    private void on_container_search_entry_changed (string search_text) {
+        containers_view.filter_containers (search_text);
     }
 
     //  private void on_cleanup_images_button_clicked (Gee.List<string> images) {
@@ -248,6 +259,10 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
         containers_view.set_containers (containers);
     }
 
+    public void show_volumes (Gee.List<WhaleWatcher.Models.DockerVolume> volumes) {
+        volumes_view.set_volumes (volumes);
+    }
+
     public void show_image_details (string image_name, WhaleWatcher.Models.DockerImageDetails image_details) {
         images_view.set_image_details (image_name, image_details);
     }
@@ -278,5 +293,7 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
     public signal void import_image_button_clicked ();
     
     public signal void image_selected (string image_name);
+
+    public signal void browse_volume_button_clicked (string volume_name);
 
 }

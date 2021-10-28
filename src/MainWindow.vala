@@ -48,6 +48,7 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         main_layout.export_image_button_clicked.connect (on_image_export_button_clicked);
         main_layout.retry_connection.connect (run_startup_checks);
         main_layout.image_selected.connect (on_image_selected);
+        main_layout.browse_volume_button_clicked.connect (on_browse_volume_button_clicked);
         add (main_layout);
 
         move (WhaleWatcher.Application.settings.get_int ("pos-x"), WhaleWatcher.Application.settings.get_int ("pos-y"));
@@ -86,6 +87,7 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         WhaleWatcher.Application.docker_service.version_received.connect (on_version_received);
         WhaleWatcher.Application.docker_service.images_received.connect (on_images_received);
         WhaleWatcher.Application.docker_service.containers_received.connect (on_containers_received);
+        WhaleWatcher.Application.docker_service.volumes_received.connect (on_volumes_received);
         WhaleWatcher.Application.docker_service.image_details_received.connect (on_image_details_received);
         WhaleWatcher.Application.docker_service.image_history_received.connect (on_image_history_received);
 
@@ -155,6 +157,13 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
     private void on_containers_received (Gee.List<WhaleWatcher.Models.DockerContainer> containers) {
         Idle.add (() => {
             main_layout.show_containers (containers);
+            return false;
+        });
+    }
+
+    private void on_volumes_received (Gee.List<WhaleWatcher.Models.DockerVolume> volumes) {
+        Idle.add (() => {
+            main_layout.show_volumes (volumes);
             return false;
         });
     }
@@ -265,6 +274,19 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
                 debug (@"Exporting $uri");
                 WhaleWatcher.Application.docker_service.export_image (image, uri);
             }
+        }
+    }
+
+    private void on_browse_volume_button_clicked (string volume_name) {
+        // TODO: This path should really be provided by the volume mountpoint property
+        string uri = @"file:///var/lib/docker/volumes/$volume_name/_data/";
+        try {
+            // Lookup the executable for the default file browser
+            var executable = GLib.AppInfo.get_default_for_type ("inode/directory", true).get_executable ();
+            // The /var/lib/docker directory is restricted, so launch the file browser with pkexec
+            new GLib.SubprocessLauncher (GLib.SubprocessFlags.NONE).spawnv (new string[] { "pkexec", executable, uri });
+        } catch (GLib.Error e) {
+            warning ("Failed to open URI (%s): %s", uri, e.message);
         }
     }
 

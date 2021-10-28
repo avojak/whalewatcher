@@ -116,7 +116,7 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
                 layers_size_received (system_data_usage.layers_size);
                 images_received (system_data_usage.images);
                 containers_received (system_data_usage.containers);
-                //  volumes_received (system_data_usage.volumes);
+                volumes_received (system_data_usage.volumes);
             }
         });
     }
@@ -196,6 +196,16 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
                 image_exported (image);
             } else {
                 // TODO
+            }
+        });
+    }
+
+    public void request_volumes () {
+        new Thread<void> (null, () => {
+            // An image name is either a name:tag pair or an ID
+            var volumes = docker_client.get_volumes ();
+            if (volumes != null) {
+                volumes_received (volumes);
             }
         });
     }
@@ -295,6 +305,7 @@ public class WhaleWatcher.Services.DockerService : GLib.Object {
     public signal void version_received (WhaleWatcher.Models.DockerVersion version);
     public signal void images_received (Gee.List<WhaleWatcher.Models.DockerImageSummary> images);
     public signal void containers_received (Gee.List<WhaleWatcher.Models.DockerContainer> containers);
+    public signal void volumes_received (Gee.List<WhaleWatcher.Models.DockerVolume> volumes);
     public signal void image_details_received (string image_name, WhaleWatcher.Models.DockerImageDetails image_details);
     public signal void image_history_received (string image_name, Gee.List<WhaleWatcher.Models.DockerImageLayer> image_history);
 

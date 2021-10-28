@@ -50,7 +50,7 @@
             orientation: Gtk.Orientation.VERTICAL,
             margin: 30,
             row_spacing: 12,
-            column_spacing: 10
+            column_spacing: 12
         );
     }
 
@@ -117,18 +117,14 @@
         size_value_label = new Gtk.Label ("") {
             halign = Gtk.Align.START
         };
-        //  grid.attach (id_label, 0, 0);
-        //  grid.attach (id_value_label, 1, 0);
-        //  grid.attach (created_label, 0, 1);
-        //  grid.attach (created_value_label, 1, 1);
-        //  grid.attach (size_label, 0, 2);
-        //  grid.attach (size_value_label, 1, 2);
+
         grid.attach (id_label, 0, 0);
         grid.attach_next_to (id_value_label, id_label, Gtk.PositionType.RIGHT);
         grid.attach_next_to (created_label, id_label, Gtk.PositionType.BOTTOM);
         grid.attach_next_to (created_value_label, created_label, Gtk.PositionType.RIGHT);
         grid.attach_next_to (size_label, created_label, Gtk.PositionType.BOTTOM);
         grid.attach_next_to (size_value_label, size_label, Gtk.PositionType.RIGHT);
+        
         return grid;
     }
 

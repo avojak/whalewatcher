@@ -21,6 +21,39 @@
 
 public class WhaleWatcher.Models.DockerContainer : GLib.Object {
 
+    public enum State {
+
+        CREATED,
+        RESTARTING,
+        RUNNING,
+        REMOVING,
+        PAUSED,
+        EXITED,
+        DEAD;
+
+        public static State get_value_by_short_name (string short_name) {
+            switch (short_name) {
+                case "created":
+                    return CREATED;
+                case "restarting":
+                    return RESTARTING;
+                case "running":
+                    return RUNNING;
+                case "removing":
+                    return REMOVING;
+                case "paused":
+                    return PAUSED;
+                case "exited":
+                    return EXITED;
+                case "dead":
+                    return DEAD;
+                default:
+                    assert_not_reached ();
+            }
+        }
+
+    }
+
     public string id { set; get; }
     public Gee.List<string> names { set; get; }
     public string image { set; get; }
@@ -28,7 +61,7 @@ public class WhaleWatcher.Models.DockerContainer : GLib.Object {
     public string command { set; get; }
     public int64 created { set; get; }
     public uint64 size_root_fs { set; get; }
-    public string state { set; get; }
+    public State state { set; get; }
     public string status { set; get; }
 
     public static WhaleWatcher.Models.DockerContainer from_json (Json.Object json) {
@@ -69,7 +102,7 @@ public class WhaleWatcher.Models.DockerContainer : GLib.Object {
                     obj.size_root_fs = uint64.parse (json.get_double_member (name).to_string ());
                     break;
                 case "State":
-                    obj.state = json.get_string_member (name);
+                    obj.state = State.get_value_by_short_name (json.get_string_member (name));
                     break;
                 case "Status":
                     obj.status = json.get_string_member (name);

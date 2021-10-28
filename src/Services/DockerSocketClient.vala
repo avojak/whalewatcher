@@ -139,6 +139,15 @@ public class WhaleWatcher.Services.DockerSocketClient : WhaleWatcher.Services.So
         get_sync (@"/$API_VERSION/containers/json", out json_data);
     }
 
+    public Gee.List<WhaleWatcher.Models.DockerVolume> get_volumes () {
+        string? json_data;
+        get_sync (@"/$API_VERSION/volumes", out json_data);
+        var volumes = WhaleWatcher.Util.JsonUtils.parse_json_obj (json_data, (json_obj) => {
+            return WhaleWatcher.Models.DockerVolumes.from_json (json_obj);
+        }) as WhaleWatcher.Models.DockerVolumes;
+        return volumes.volumes;
+    }
+
     public void stream_events (Cancellable cancellable) {
         get_stream (@"/$API_VERSION/events", cancellable);
     }

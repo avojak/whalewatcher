@@ -24,7 +24,7 @@ public class WhaleWatcher.Models.DockerSystemDataUsage : GLib.Object {
     public uint64 layers_size { get; set; }
     public Gee.List<WhaleWatcher.Models.DockerImageSummary> images { get; set; }
     public Gee.List<WhaleWatcher.Models.DockerContainer> containers { get; set; }
-    //  public Gee.List<WhaleWatcher.Models.DockerVolume> volumes { get; set; }
+    public Gee.List<WhaleWatcher.Models.DockerVolume> volumes { get; set; }
 
     public static WhaleWatcher.Models.DockerSystemDataUsage from_json (Json.Object json) {
         var obj = new WhaleWatcher.Models.DockerSystemDataUsage ();
@@ -62,7 +62,18 @@ public class WhaleWatcher.Models.DockerSystemDataUsage : GLib.Object {
                     }
                     break;
                 case "Volumes":
-                    //  obj.api_version = json.get_string_member (name);
+                    obj.volumes = new Gee.ArrayList<WhaleWatcher.Models.DockerVolume> ();
+                    var member = json.get_member (name);
+                    if (member == null || member.is_null ()) {
+                        break;
+                    }
+                    var array = member.get_array ();
+                    if (array == null) {
+                        break;
+                    }
+                    foreach (var element in array.get_elements ()) {
+                        obj.volumes.add (WhaleWatcher.Models.DockerVolume.from_json (element.get_object ()));
+                    }
                     break;
                 default:
                     warning ("Unsupported attribute: %s", name);
