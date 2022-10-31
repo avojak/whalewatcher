@@ -29,18 +29,17 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
     // Image view button group
     private Gtk.SearchEntry image_search_entry;
     private Gtk.Button image_import_button;
-    private Gtk.Button image_inspect_export_button;
+    private Gtk.Button image_export_button;
+    private Gtk.Button image_pull_button;
+    private Gtk.Button image_push_button;
+    private Gtk.Button image_create_button;
+    private Gtk.Button image_delete_button;
+    private Gtk.Button image_run_button;
 
     // Container view button group
     private Gtk.SearchEntry container_search_entry;
 
-    // Image inspect button group
-    //  private Gtk.Button image_inspect_remove_button;
-    //  private Gtk.Button image_inspect_pull_button;
-    //  private Gtk.Button image_inspect_run_button;
-    //  private Gtk.Separator image_inspect_separator;
-
-    private Gtk.Button user_button;
+    private Gtk.Button login_button;
 
     public HeaderBar () {
         Object (
@@ -88,32 +87,41 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
         return_button_separator = new Gtk.Separator (Gtk.Orientation.VERTICAL);
         return_button_separator.no_show_all = true;
 
-        user_button = create_headerbar_button ("avatar-default", "Sign in…");
-        user_button.no_show_all = false;
+        login_button = create_headerbar_button ("avatar-default", "Sign in…");
+        login_button.no_show_all = false;
+        login_button.clicked.connect (() => {
+            login_button_clicked ();
+        });
 
-        //  create_image_inspect_button_group ();
         create_image_view_button_group ();
         create_container_view_button_group ();
-
-        // TODO: Revisit how these buttons are arranged
 
         pack_start (return_button);
         pack_start (return_button_separator);
 
-        pack_end (user_button);
+        pack_start (image_import_button);
+        pack_start (image_export_button);
+        pack_start (new Gtk.Separator (Gtk.Orientation.VERTICAL));
+        pack_start (image_pull_button);
+        pack_start (image_push_button);
+        pack_start (new Gtk.Separator (Gtk.Orientation.VERTICAL));
+        pack_start (image_delete_button);
+        pack_start (image_create_button);
+
+        //  pack_end (login_button);
+
         pack_end (image_search_entry);
         pack_end (container_search_entry);
         //  pack_end (spinner);
         pack_end (new Gtk.Separator (Gtk.Orientation.VERTICAL));
+        pack_end (image_run_button);
 
-        // Image browsing button group
-        pack_start (image_import_button);
-        //  pack_start (image_create_button);
+        //  pack_end (image_run_button);
+        //  pack_end (new Gtk.Separator (Gtk.Orientation.VERTICAL));
+        //  pack_end (image_delete_button);
+        //  pack_end (image_create_button);
 
-        // Image inspect button group
-
-        // TODO: Add spinner for background actions
-
+        pack_end (new Gtk.Separator (Gtk.Orientation.VERTICAL));
     }
 
     private void create_image_view_button_group () {
@@ -122,8 +130,39 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
             image_import_button_clicked ();
         });
 
+        image_export_button = create_headerbar_button ("document-export", _("Export…"));
+        image_export_button.clicked.connect (() => {
+            image_export_button_clicked ();
+        });
+
+        image_pull_button = create_headerbar_button ("browser-download", _("Pull…"));
+        image_pull_button.clicked.connect (() => {
+            image_pull_button_clicked ();
+        });
+
+        image_push_button = create_headerbar_button ("document-send", _("Push…"));
+        image_push_button.clicked.connect (() => {
+            image_push_button_clicked ();
+        });
+
+        image_create_button = create_headerbar_button ("document-new", _("Create…"));
+        image_create_button.clicked.connect (() => {
+            image_create_button_clicked ();
+        });
+
+        image_delete_button = create_headerbar_button ("edit-delete", _("Cleanup…"));
+        image_delete_button.clicked.connect (() => {
+            image_delete_button_clicked ();
+        });
+
+        image_run_button = create_headerbar_button ("media-playback-start", _("Run…"));
+        image_run_button.clicked.connect (() => {
+            image_run_button_clicked ();
+        });
+
         image_search_entry = new Gtk.SearchEntry () {
-            placeholder_text = _("Search Images")
+            placeholder_text = _("Search Images"),
+            valign = Gtk.Align.CENTER
         };
         image_search_entry.changed.connect (() => {
             image_search_entry_changed (image_search_entry.text);
@@ -132,7 +171,8 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
 
     private void create_container_view_button_group () {
         container_search_entry = new Gtk.SearchEntry () {
-            placeholder_text = _("Search Containers")
+            placeholder_text = _("Search Containers"),
+            valign = Gtk.Align.CENTER
         };
         container_search_entry.changed.connect (() => {
             container_search_entry_changed (container_search_entry.text);
@@ -204,6 +244,18 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
     public void set_image_view_buttons_visible (bool visible) {
         image_import_button.no_show_all = !visible;
         image_import_button.visible = visible;   
+        image_export_button.no_show_all = !visible;
+        image_export_button.visible = visible;
+        image_pull_button.no_show_all = !visible;
+        image_pull_button.visible = visible;
+        image_push_button.no_show_all = !visible;
+        image_push_button.visible = visible;
+        image_create_button.no_show_all = !visible;
+        image_create_button.visible = visible;
+        image_delete_button.no_show_all = !visible;
+        image_delete_button.visible = visible;
+        image_run_button.no_show_all = !visible;
+        image_run_button.visible = visible;
         image_search_entry.no_show_all = !visible;
         image_search_entry.visible = visible;
     }
@@ -231,10 +283,18 @@ public class WhaleWatcher.Widgets.HeaderBar : Hdy.HeaderBar {
         }
     }
 
+    public signal void login_button_clicked ();
+
     public signal void view_selected (string view_title);
     public signal void view_return ();
+
     public signal void image_import_button_clicked ();
     public signal void image_export_button_clicked ();
+    public signal void image_pull_button_clicked ();
+    public signal void image_push_button_clicked ();
+    public signal void image_create_button_clicked ();
+    public signal void image_delete_button_clicked ();
+    public signal void image_run_button_clicked ();
 
     public signal void image_search_entry_changed (string search_text);
     public signal void container_search_entry_changed (string search_text);

@@ -38,4 +38,25 @@ public class WhaleWatcher.Widgets.ImageTagListItem : Granite.Widgets.SourceList.
         icon = in_use ? new GLib.ThemedIcon ("emblem-enabled") : new GLib.ThemedIcon ("emblem-disabled");
     }
 
+    public override Gtk.Menu? get_context_menu () {
+        var menu = new Gtk.Menu ();
+
+        var run_item = new Gtk.MenuItem.with_label (_("Run…"));
+        var push_item = new Gtk.MenuItem.with_label (_("Push…"));
+        var pull_item = new Gtk.MenuItem.with_label (_("Pull…"));
+        var export_item = new Gtk.MenuItem.with_label (_("Export…"));
+        var delete_item = new Gtk.MenuItem.with_label (_("Delete…"));
+        
+        menu.append (run_item);
+        menu.append (new Gtk.SeparatorMenuItem ());
+        menu.append (push_item);
+        menu.append (pull_item);
+        menu.append (export_item);
+        menu.append (new Gtk.SeparatorMenuItem ());
+        menu.append (delete_item);
+        menu.show_all ();
+
+        return menu;
+    }
+
 }

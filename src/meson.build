@@ -40,6 +40,7 @@ whalewatcher_files = files(
     join_paths('Widgets', 'ImageTagListItem.vala'),
     join_paths('Widgets', 'VolumesSourceList.vala'),
     join_paths('Widgets', 'VolumeListItem.vala'),
+    join_paths('Widgets', 'Dialogs', 'AuthDialog.vala'),
     join_paths('Widgets', 'Dialogs', 'ErrorDialog.vala'),
     join_paths('Widgets', 'Dialogs', 'RemoveImagesWarningDialog.vala'),
     join_paths('Widgets', 'Sidebar', 'ImagesEntry.vala'),

@@ -24,6 +24,7 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
     public unowned WhaleWatcher.Application app { get; construct; }
 
     private WhaleWatcher.Widgets.ErrorDialog? error_dialog;
+    private WhaleWatcher.Widgets.AuthDialog? auth_dialog;
 
     private WhaleWatcher.Layouts.MainLayout main_layout;
 
@@ -35,13 +36,13 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
             application: application,
             app: application,
             border_width: 0,
-            resizable: true,
-            window_position: Gtk.WindowPosition.CENTER
+            resizable: true
         );
     }
 
     construct {
         main_layout = new WhaleWatcher.Layouts.MainLayout (this);
+        main_layout.login_button_clicked.connect (on_login_button_clicked);
         main_layout.delete_image_button_clicked.connect (on_delete_image_button_clicked);
         main_layout.pull_image_button_clicked.connect (on_pull_image_button_clicked);
         main_layout.import_image_button_clicked.connect (on_import_image_button_clicked);
@@ -288,6 +289,20 @@ public class WhaleWatcher.MainWindow : Hdy.Window {
         } catch (GLib.Error e) {
             warning ("Failed to open URI (%s): %s", uri, e.message);
         }
+    }
+
+    private void on_login_button_clicked () {
+        Idle.add (() => {
+            if (auth_dialog == null) {
+                auth_dialog = new WhaleWatcher.Widgets.AuthDialog (this);
+                auth_dialog.show_all ();
+                auth_dialog.destroy.connect (() => {
+                    auth_dialog = null;
+                });
+            }
+            auth_dialog.present ();
+            return false;
+        });
     }
 
     private void on_error_received (string error, string description, string? error_details) {

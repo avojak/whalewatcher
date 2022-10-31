@@ -108,12 +108,15 @@ public class WhaleWatcher.Widgets.ImagesSourceList : Gtk.Grid {
         });
 
         source_list.root.add (local_category);
-        source_list.root.add (remote_category);
+        //  source_list.root.add (remote_category);
 
         source_list.item_selected.connect (on_item_selected);
 
         action_bar = new Gtk.ActionBar ();
         action_bar.get_style_context ().add_class (Gtk.STYLE_CLASS_INLINE_TOOLBAR);
+
+        // Add sort options
+        // Add ability to expand/collapse all
 
         delete_button = new Gtk.Button.from_icon_name ("edit-delete-symbolic", Gtk.IconSize.SMALL_TOOLBAR) {
             tooltip_text = _("Remove…"),
@@ -149,6 +152,19 @@ public class WhaleWatcher.Widgets.ImagesSourceList : Gtk.Grid {
 
         image_items = new Gee.HashMap<string, WhaleWatcher.Widgets.ImageListItem> ();
         image_tag_items = new Gee.HashMap<string, Gee.List<WhaleWatcher.Widgets.ImageTagListItem>> ();
+
+        source_list.motion_notify_event.connect ((event_motion) => {
+            debug ("Motion: x=%s, y=%s", event_motion.x.to_string (), event_motion.y.to_string ());
+        });
+        source_list.enter_notify_event.connect (() => {
+            debug ("Enter");
+        });
+        source_list.leave_notify_event.connect (() => {
+            debug ("Leave");
+        });
+        source_list.scroll_event.connect ((event_scroll) => {
+            debug ("Scroll");
+        });
     }
 
     public void set_images (Gee.List<WhaleWatcher.Models.DockerImageSummary> images) {

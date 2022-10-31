@@ -54,6 +54,9 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
         header_bar = new WhaleWatcher.Widgets.HeaderBar ();
         header_bar.view_selected.connect (on_view_selected);
         header_bar.view_return.connect (on_view_return);
+        header_bar.login_button_clicked.connect (() => {
+            login_button_clicked ();
+        });
         header_bar.image_import_button_clicked.connect (() => {
             import_image_button_clicked ();
         });
@@ -286,6 +289,8 @@ public class WhaleWatcher.Layouts.MainLayout : Gtk.Grid {
     //  }
 
     public signal void retry_connection ();
+    
+    public signal void login_button_clicked ();
 
     public signal void delete_image_button_clicked (string image_name);
     public signal void pull_image_button_clicked (string image_name);
